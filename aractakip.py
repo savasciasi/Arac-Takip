@@ -91,10 +91,33 @@ translations = {
     }
 }
 
-LIGHT_STYLE = ""
-DARK_STYLE = """\
-QWidget { background-color: #2b2b2b; color: #f0f0f0; }\
-QLineEdit, QTableWidget { background-color: #3c3c3c; color: #f0f0f0; }\
+# Light and dark theme stylesheets for a modern look
+LIGHT_STYLE = """
+QWidget { background-color: #f0f2f5; font-family: Arial; }
+QLineEdit { background-color: #ffffff; padding: 4px; border-radius: 4px; }
+QListWidget#menu { background-color: #ffffff; border-radius: 8px; }
+QListWidget#menu::item { padding: 8px; }
+QListWidget#menu::item:hover { background: #e6e6e6; }
+QListWidget#menu::item:selected { background: #4a90e2; color: white; }
+QTableWidget { background-color: #ffffff; alternate-background-color: #f5f5f5; gridline-color: #dcdcdc; }
+QHeaderView::section { font-weight: bold; font-size: 14px; background: #ffffff; padding: 4px; border: 1px solid #dcdcdc; }
+QPushButton { border-radius: 5px; background-color: #4a90e2; color: white; padding: 5px 10px; }
+QPushButton:hover { background-color: #357abd; }
+QPushButton:disabled { background-color: #cccccc; }
+"""
+
+DARK_STYLE = """
+QWidget { background-color: #2b2b2b; color: #f0f0f0; font-family: Arial; }
+QLineEdit { background-color: #3c3c3c; color: #f0f0f0; padding: 4px; border-radius: 4px; }
+QListWidget#menu { background-color: #3c3c3c; border-radius: 8px; }
+QListWidget#menu::item { padding: 8px; color: #f0f0f0; }
+QListWidget#menu::item:hover { background: #505050; }
+QListWidget#menu::item:selected { background: #4a90e2; color: white; }
+QTableWidget { background-color: #3c3c3c; alternate-background-color: #303030; gridline-color: #505050; }
+QHeaderView::section { font-weight: bold; font-size: 14px; background: #3c3c3c; padding: 4px; border: 1px solid #505050; }
+QPushButton { border-radius: 5px; background-color: #4a90e2; color: white; padding: 5px 10px; }
+QPushButton:hover { background-color: #357abd; }
+QPushButton:disabled { background-color: #666666; }
 """
 
 
@@ -275,21 +298,27 @@ class MainWindow(QtWidgets.QMainWindow):
         self.resize(800, 600)
         self.central = QtWidgets.QWidget()
         self.setCentralWidget(self.central)
+        self.setFont(QtGui.QFont('Arial', 10))
         self.create_ui()
         self.update_language()
         self.apply_theme()
 
     def create_ui(self):
         main_layout = QtWidgets.QHBoxLayout(self.central)
+        main_layout.setSpacing(10)
+
         self.menu = QtWidgets.QListWidget()
+        self.menu.setObjectName("menu")
+        self.menu.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.menu.setSpacing(2)
         self.menu.addItems([
-            translations[self.language]['home'],
-            translations[self.language]['vehicles'],
-            translations[self.language]['users'],
-            translations[self.language]['logs'],
-            translations[self.language]['settings'],
-            translations[self.language]['change_password'],
-            translations[self.language]['logout']])
+            "\U0001F3E0 " + translations[self.language]['home'],
+            "\U0001F697 " + translations[self.language]['vehicles'],
+            "\U0001F464 " + translations[self.language]['users'],
+            "\U0001F4C4 " + translations[self.language]['logs'],
+            "\U0001F6E0\uFE0F " + translations[self.language]['settings'],
+            "\U0001F512 " + translations[self.language]['change_password'],
+            "\U0001F6AA " + translations[self.language]['logout']])
         self.menu.currentRowChanged.connect(self.display_page)
         main_layout.addWidget(self.menu)
 
@@ -300,13 +329,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.home_page = QtWidgets.QWidget()
         hlayout = QtWidgets.QVBoxLayout(self.home_page)
         self.home_label = QtWidgets.QLabel()
+        self.home_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.home_label.setStyleSheet("font-size:20pt;font-weight:bold;color:#1f3c88;")
+        hlayout.addStretch()
         hlayout.addWidget(self.home_label)
+        hlayout.addStretch()
         self.stack.addWidget(self.home_page)
 
         # Vehicles Page
         self.vehicle_page = QtWidgets.QWidget()
         vlayout = QtWidgets.QVBoxLayout(self.vehicle_page)
         self.vehicle_table = QtWidgets.QTableWidget(0,4)
+        self.vehicle_table.setAlternatingRowColors(True)
+        self.vehicle_table.setShowGrid(False)
+        self.vehicle_table.verticalHeader().setVisible(False)
         self.vehicle_table.setHorizontalHeaderLabels([
             translations[self.language]['plate'],
             translations[self.language]['driver'],
@@ -314,9 +350,9 @@ class MainWindow(QtWidgets.QMainWindow):
             translations[self.language]['last_maintenance']])
         vlayout.addWidget(self.vehicle_table)
         btn_layout = QtWidgets.QHBoxLayout()
-        self.add_vehicle_btn = QtWidgets.QPushButton(translations[self.language]['add'])
-        self.edit_vehicle_btn = QtWidgets.QPushButton(translations[self.language]['edit'])
-        self.del_vehicle_btn = QtWidgets.QPushButton(translations[self.language]['delete'])
+        self.add_vehicle_btn = QtWidgets.QPushButton()
+        self.edit_vehicle_btn = QtWidgets.QPushButton()
+        self.del_vehicle_btn = QtWidgets.QPushButton()
         self.add_vehicle_btn.clicked.connect(self.add_vehicle)
         self.edit_vehicle_btn.clicked.connect(self.edit_vehicle)
         self.del_vehicle_btn.clicked.connect(self.delete_vehicle)
@@ -329,9 +365,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.user_page = QtWidgets.QWidget()
         ulayout = QtWidgets.QVBoxLayout(self.user_page)
         self.user_table = QtWidgets.QTableWidget(0,1)
+        self.user_table.setAlternatingRowColors(True)
+        self.user_table.setShowGrid(False)
+        self.user_table.verticalHeader().setVisible(False)
         self.user_table.setHorizontalHeaderLabels([translations[self.language]['username']])
         ulayout.addWidget(self.user_table)
-        self.add_user_btn = QtWidgets.QPushButton(translations[self.language]['add'])
+        self.add_user_btn = QtWidgets.QPushButton()
         self.add_user_btn.clicked.connect(self.add_user)
         ulayout.addWidget(self.add_user_btn)
         self.stack.addWidget(self.user_page)
@@ -340,6 +379,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.log_page = QtWidgets.QWidget()
         llayout = QtWidgets.QVBoxLayout(self.log_page)
         self.log_table = QtWidgets.QTableWidget(0,3)
+        self.log_table.setAlternatingRowColors(True)
+        self.log_table.setShowGrid(False)
+        self.log_table.verticalHeader().setVisible(False)
         self.log_table.setHorizontalHeaderLabels(['Time','User','Action'])
         llayout.addWidget(self.log_table)
         self.stack.addWidget(self.log_page)
@@ -367,7 +409,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Password Page
         self.pass_page = QtWidgets.QWidget()
         playout = QtWidgets.QVBoxLayout(self.pass_page)
-        self.pass_btn = QtWidgets.QPushButton(translations[self.language]['change_password'])
+        self.pass_btn = QtWidgets.QPushButton()
         self.pass_btn.clicked.connect(self.change_password)
         playout.addWidget(self.pass_btn)
         self.stack.addWidget(self.pass_page)
@@ -384,16 +426,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def update_language(self):
         t = translations[self.language]
+        icons = ["\U0001F3E0 ", "\U0001F697 ", "\U0001F464 ", "\U0001F4C4 ",
+                 "\U0001F6E0\uFE0F ", "\U0001F512 ", "\U0001F6AA "]
         for i, key in enumerate(['home','vehicles','users','logs','settings','change_password','logout']):
             item = self.menu.item(i)
             if item:
-                item.setText(t[key])
-        self.add_vehicle_btn.setText(t['add'])
-        self.edit_vehicle_btn.setText(t['edit'])
-        self.del_vehicle_btn.setText(t['delete'])
+                item.setText(icons[i] + t[key])
+        self.add_vehicle_btn.setText("\u2795 " + t['add'])
+        self.edit_vehicle_btn.setText("\U0001F4DD " + t['edit'])
+        self.del_vehicle_btn.setText("\U0001F5D1\uFE0F " + t['delete'])
         self.vehicle_table.setHorizontalHeaderLabels([t['plate'],t['driver'],t['km'],t['last_maintenance']])
         self.user_table.setHorizontalHeaderLabels([t['username']])
-        self.add_user_btn.setText(t['add'])
+        self.add_user_btn.setText("\u2795 " + t['add'])
         self.lang_combo.setItemText(0,translations['tr']['turkish'])
         self.lang_combo.setItemText(1,translations['de']['german'])
         self.theme_combo.setItemText(0,t['light'])
@@ -401,7 +445,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.lang_label.setText(t['language'])
         self.theme_label.setText(t['theme'])
         self.home_label.setText(t['total_vehicles'].format(count=self.vehicle_table.rowCount()))
-        self.pass_btn.setText(t['change_password'])
+        self.pass_btn.setText("\U0001F512 " + t['change_password'])
         self.setWindowTitle(translations[self.language]['vehicle_tracking'])
 
     def apply_theme(self):
