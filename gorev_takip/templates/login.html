@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Giriş{% endblock %}
+{% block content %}
+<h2>Giriş</h2>
+<form method="post">
+  <div class="mb-3">
+    <label class="form-label">Kullanıcı Adı</label>
+    <input type="text" name="username" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Şifre</label>
+    <input type="password" name="password" class="form-control" required>
+  </div>
+  <button type="submit" class="btn btn-primary">Giriş</button>
+  <a href="{{ url_for('register') }}" class="btn btn-link">Kayıt Ol</a>
+</form>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Görevlerim{% endblock %}
+{% block content %}
+<h2>Görevlerim</h2>
+<table class="table table-striped">
+  <thead><tr><th>Firma</th><th>Şantiye</th><th>Tarih</th><th>Açıklama</th><th>Dosya</th></tr></thead>
+  <tbody>
+  {% for t in tasks %}
+  <tr>
+    <td>{{ t[0] }}</td>
+    <td>{{ t[1] }}</td>
+    <td>{{ t[2] }}</td>
+    <td>{{ t[3] }}</td>
+    <td><a href="{{ url_for('static', filename='uploads/' ~ t[4]) }}" target="_blank">Dosya</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Görev Ekle{% endblock %}
+{% block content %}
+<h2>Görev Ekle</h2>
+<form method="post" enctype="multipart/form-data">
+  <div class="mb-3">
+    <label class="form-label">Firma</label>
+    <input type="text" name="firma" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Şantiye</label>
+    <input type="text" name="santiye" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Tarih</label>
+    <input type="date" name="tarih" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Açıklama</label>
+    <textarea name="aciklama" class="form-control" required></textarea>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Fotoğraf</label>
+    <input type="file" name="foto" class="form-control" required>
+  </div>
+  <button type="submit" class="btn btn-primary">Kaydet</button>
+</form>
+{% endblock %}
