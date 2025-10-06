@@ -4,8 +4,7 @@ from __future__ import annotations
 import difflib
 from typing import Callable, List, Sequence, Tuple
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QLineEdit, QVBoxLayout, QWidget
+from ...qt import QListWidget, QListWidgetItem, QLineEdit, QVBoxLayout, QWidget, Qt
 
 
 class CommandPalette(QWidget):

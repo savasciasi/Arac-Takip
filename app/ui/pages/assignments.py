@@ -3,8 +3,19 @@ from __future__ import annotations
 
 from datetime import date
 
-from PyQt5.QtGui import QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import QComboBox, QFormLayout, QHBoxLayout, QLabel, QPushButton, QTableView, QTextEdit, QVBoxLayout, QWidget
+from ...qt import (
+    QComboBox,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QStandardItem,
+    QStandardItemModel,
+    QTableView,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ...repo.assignments_repo import AssignmentRepository
 from ...repo.drivers_repo import DriverRepository

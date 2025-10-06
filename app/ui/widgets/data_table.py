@@ -1,8 +1,7 @@
 """Enhanced table view with zebra striping and sticky header."""
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QHeaderView, QTableView
+from ...qt import QHeaderView, QTableView, Qt
 
 
 class DataTable(QTableView):

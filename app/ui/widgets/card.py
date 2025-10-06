@@ -1,7 +1,7 @@
 """Card widget with modern styling."""
 from __future__ import annotations
 
-from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget
+from ...qt import QLabel, QVBoxLayout, QWidget
 
 
 class Card(QWidget):

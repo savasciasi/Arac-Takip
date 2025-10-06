@@ -1,7 +1,7 @@
 """Recycle bin page to restore or permanently delete records."""
 from __future__ import annotations
 
-from PyQt5.QtWidgets import QHBoxLayout, QLabel, QListWidget, QPushButton, QVBoxLayout, QWidget
+from ...qt import QHBoxLayout, QLabel, QListWidget, QPushButton, QVBoxLayout, QWidget
 
 from ...repo.vehicles_repo import VehicleRepository
 from ...repo.drivers_repo import DriverRepository

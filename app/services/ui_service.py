@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Dict
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from ..qt import QObject, pyqtSignal
 
 from ..ui.qss import theme_builder
 

@@ -1,7 +1,7 @@
 """Settings page allowing to tweak application preferences."""
 from __future__ import annotations
 
-from PyQt5.QtWidgets import (
+from ...qt import (
     QCheckBox,
     QComboBox,
     QFormLayout,

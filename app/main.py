@@ -5,20 +5,22 @@ import sys
 
 from pathlib import Path
 
-from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtWidgets import (
+from .qt import (
     QApplication,
     QButtonGroup,
     QFrame,
     QHBoxLayout,
+    QIcon,
     QLabel,
     QMainWindow,
+    QFont,
     QPushButton,
+    QSize,
+    QSizePolicy,
     QStackedWidget,
+    Qt,
     QVBoxLayout,
     QWidget,
-    QSizePolicy,
 )
 
 from .services.settings_service import SettingsService

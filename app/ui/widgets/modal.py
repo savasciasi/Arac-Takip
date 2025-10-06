@@ -1,8 +1,7 @@
 """Reusable modal dialog with unsaved change confirmation."""
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QWidget
+from ...qt import QDialog, QDialogButtonBox, QVBoxLayout, QWidget, Qt
 
 
 class ModalDialog(QDialog):

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from PyQt5.QtWidgets import QLabel, QListWidget, QHBoxLayout, QVBoxLayout
+from ...qt import QHBoxLayout, QLabel, QListWidget, QVBoxLayout
 
 from ...repo.fines_repo import FineRepository
 from ...repo.maintenance_repo import MaintenanceRepository

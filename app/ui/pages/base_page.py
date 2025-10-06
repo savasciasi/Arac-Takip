@@ -1,7 +1,7 @@
 """Base page providing shared helpers."""
 from __future__ import annotations
 
-from PyQt5.QtWidgets import QWidget
+from ...qt import QWidget
 
 from ...services.ui_service import UIService
 

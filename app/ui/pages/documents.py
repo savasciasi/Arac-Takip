@@ -6,20 +6,23 @@ from pathlib import Path
 from typing import Optional
 
 from PIL import Image
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QPixmap, QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import (
+from ...qt import (
     QComboBox,
+    QDesktopServices,
     QFormLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPixmap,
     QPushButton,
+    QStandardItem,
+    QStandardItemModel,
     QTableView,
+    Qt,
+    QUrl,
     QVBoxLayout,
     QWidget,
 )
-from PyQt5.QtGui import QDesktopServices
 
 from ...models.document import Document
 from ...repo.documents_repo import DocumentRepository

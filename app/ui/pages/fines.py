@@ -7,22 +7,25 @@ from datetime import date
 from pathlib import Path
 from typing import Optional
 
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import (
+from ...qt import (
     QComboBox,
     QDateEdit,
+    QDesktopServices,
     QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
-    QListWidget,
-    QListWidgetItem,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMessageBox,
     QPushButton,
+    QStandardItem,
+    QStandardItemModel,
     QTableView,
     QTextEdit,
+    Qt,
+    QUrl,
     QVBoxLayout,
     QWidget,
 )

@@ -3,8 +3,7 @@ from __future__ import annotations
 
 from typing import List
 
-from PyQt5.QtCore import QEasingCurve, QPropertyAnimation, QPoint, Qt, QTimer
-from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget
+from ...qt import QEasingCurve, QPropertyAnimation, QPoint, QLabel, Qt, QTimer, QVBoxLayout, QWidget
 
 
 class Toast(QWidget):

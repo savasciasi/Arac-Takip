@@ -4,18 +4,21 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import (
-    QFormLayout,
-    QHBoxLayout,
+from ...qt import (
+    QLabel,
     QListWidget,
     QListWidgetItem,
-    QLabel,
-    QLineEdit,
     QPushButton,
+    QDesktopServices,
+    QFormLayout,
+    QHBoxLayout,
+    QLineEdit,
+    QStandardItem,
+    QStandardItemModel,
     QTableView,
     QTextEdit,
+    Qt,
+    QUrl,
     QVBoxLayout,
     QWidget,
 )

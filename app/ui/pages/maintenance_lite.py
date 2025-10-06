@@ -3,8 +3,18 @@ from __future__ import annotations
 
 from datetime import date
 
-from PyQt5.QtGui import QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import QDateEdit, QFormLayout, QLabel, QPushButton, QTableView, QTextEdit, QVBoxLayout, QWidget
+from ...qt import (
+    QDateEdit,
+    QFormLayout,
+    QLabel,
+    QPushButton,
+    QStandardItem,
+    QStandardItemModel,
+    QTableView,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ...models.maintenance import MaintenanceReminder
 from ...repo.maintenance_repo import MaintenanceRepository

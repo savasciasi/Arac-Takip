@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from PyQt5.QtWidgets import QFileDialog, QWidget
+from ...qt import QFileDialog, QWidget
 
 
 class FilePicker:

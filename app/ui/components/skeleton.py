@@ -1,9 +1,7 @@
 """Animated skeleton placeholder widget."""
 from __future__ import annotations
 
-from PyQt5.QtCore import QEasingCurve, QPropertyAnimation, Qt
-from PyQt5.QtGui import QBrush, QColor, QLinearGradient, QPainter
-from PyQt5.QtWidgets import QWidget
+from ...qt import QEasingCurve, QPropertyAnimation, QBrush, QColor, QLinearGradient, QPainter, Qt, QWidget
 
 
 class Skeleton(QWidget):
