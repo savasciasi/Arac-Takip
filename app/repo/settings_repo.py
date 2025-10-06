@@ -9,7 +9,11 @@ from ..models.app_settings import AppSetting
 class SettingsRepository:
     """Repository for app settings key/value pairs."""
 
-    table = table_name("app_settings")
+    @property
+    def table(self) -> str:
+        """Resolve the active table name at call time for brand safety."""
+
+        return table_name("app_settings")
 
     def as_dict(self) -> Dict[str, str]:
         with get_connection() as conn:
