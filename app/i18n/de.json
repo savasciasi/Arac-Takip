@@ -1,5 +1,9 @@
 {
   "app.title": "Fuhrpark & Strafverwaltung",
+  "app.brand.select": "Marke wählen",
+  "app.brand.prompt": "Bitte wählen Sie, für welche Marke die Anwendung gestartet werden soll.",
+  "app.brand.knk": "KNK",
+  "app.brand.nkk": "NKK",
   "ui.language.turkish": "Türkisch",
   "ui.language.german": "Deutsch",
   "ui.theme.light": "Hell",

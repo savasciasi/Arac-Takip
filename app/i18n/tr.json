@@ -1,5 +1,9 @@
 {
   "app.title": "Filo ve Ceza Yönetimi",
+  "app.brand.select": "Marka Seçimi",
+  "app.brand.prompt": "Lütfen hangi marka için uygulamayı açacağınızı seçin.",
+  "app.brand.knk": "KNK",
+  "app.brand.nkk": "NKK",
   "ui.language.turkish": "Türkçe",
   "ui.language.german": "Almanca",
   "ui.theme.light": "Açık",

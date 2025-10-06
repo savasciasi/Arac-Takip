@@ -24,6 +24,8 @@ python -m app.data.seed
 python -m app.main
 ```
 
+Uygulama açılırken KNK veya NKK markasını seçmeniz istenir. Seçime göre ana arka plan logosu otomatik uygulanır. Logo dosyaları `app/assets/branding/` klasöründe bulunduğundan, kendi logolarınız ile kolayca değiştirebilirsiniz.
+
 ## Paketleme
 
 PyInstaller kullanarak Windows 64-bit için paketleme:
@@ -47,6 +49,8 @@ Oluşan `dist/AracTakip` klasörü çalıştırılabilir uygulamayı içerir.
 - Recycle bin ile yumuşak silme ve geri yükleme
 - CSV/PDF dışa aktarma, tablo düzeni kalıcılığı için JSON kayıt (basit örnek)
 - I18N desteği (Türkçe/Almanca) ve tema profilleri (minimal, glass, contrast)
+- Oturum açılışında marka seçimi (KNK/NKK) ve dinamik arka plan logosu
+- phpMyAdmin’e aktarmak için MySQL şeması (`app/integrations/phpmyadmin_schema.sql`)
 
 ## Testler
 

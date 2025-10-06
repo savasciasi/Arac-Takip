@@ -8,6 +8,7 @@ from pathlib import Path
 from .qt import (
     QApplication,
     QButtonGroup,
+    QDialog,
     QFrame,
     QHBoxLayout,
     QIcon,
@@ -25,6 +26,7 @@ from .qt import (
 
 from .services.settings_service import SettingsService
 from .services.ui_service import UIService
+from .ui.components.brand_selector import BrandSelectionDialog
 from .ui.components.command_palette import CommandPalette
 from .ui.components.toast import ToastManager
 from .ui.qss import theme_builder
@@ -40,19 +42,30 @@ from .ui.pages.settings import SettingsPage
 from .ui.pages.vehicles import VehiclesPage
 
 
-ICON_DIR = Path(__file__).resolve().parents[1] / "assets" / "icons"
+ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
+ICON_DIR = ASSETS_DIR / "icons"
+BRANDING_DIR = ASSETS_DIR / "branding"
 
 
 class MainWindow(QMainWindow):
     """Main application window with navigation and stacked pages."""
 
-    def __init__(self, ui_service: UIService, settings_service: SettingsService) -> None:
+    def __init__(
+        self,
+        ui_service: UIService,
+        settings_service: SettingsService,
+        brand_mode: str,
+    ) -> None:
         super().__init__()
         self.settings_service = settings_service
         self.ui_service = ui_service
+        self.brand_mode = brand_mode
         self._app = QApplication.instance()
-        self.setWindowTitle(self.ui_service.t("app.title"))
+        self.setWindowTitle(self._brand_display())
         central = QWidget()
+        central.setObjectName("CentralContainer")
+        central.setAttribute(Qt.WA_StyledBackground, True)
+        self.central_widget = central
         self.setCentralWidget(central)
         layout = QHBoxLayout(central)
         self.sidebar = QFrame()
@@ -61,7 +74,7 @@ class MainWindow(QMainWindow):
         self.sidebar_layout = QVBoxLayout(self.sidebar)
         self.sidebar_layout.setContentsMargins(20, 32, 20, 32)
         self.sidebar_layout.setSpacing(16)
-        self.brand_label = QLabel(self.ui_service.t("app.title"))
+        self.brand_label = QLabel(self._brand_display())
         self.brand_label.setProperty("role", "card-title")
         self.sidebar_layout.addWidget(self.brand_label)
         self.nav_group = QButtonGroup(self)
@@ -81,6 +94,7 @@ class MainWindow(QMainWindow):
         self.ui_service.text_scale_changed.connect(self._apply_text_scale)
         self._apply_text_scale(self.ui_service.text_scale)
         self._apply_theme(self.ui_service.theme, self.ui_service.profile)
+        self._apply_brand_logo()
 
     def _register_pages(self) -> None:
         pages = [
@@ -112,11 +126,15 @@ class MainWindow(QMainWindow):
         self.ui_service.language_changed.connect(self._update_navigation)
 
     def _update_navigation(self, lang: str) -> None:
-        self.setWindowTitle(self.ui_service.t("app.title"))
-        self.brand_label.setText(self.ui_service.t("app.title"))
+        self.setWindowTitle(self._brand_display())
+        self.brand_label.setText(self._brand_display())
         for key, button in self.nav_buttons.items():
             button.setText(self._nav_label(key))
         self._bind_shortcuts()
+
+    def _brand_display(self) -> str:
+        brand_name = self.ui_service.t(f"app.brand.{self.brand_mode}")
+        return f"{self.ui_service.t('app.title')} · {brand_name}" if brand_name else self.ui_service.t("app.title")
 
     def _bind_shortcuts(self) -> None:
         self.command_palette.set_actions(
@@ -162,6 +180,7 @@ class MainWindow(QMainWindow):
             return
         qss = theme_builder.generate(profile, theme, self.ui_service.text_scale)
         self._app.setStyleSheet(qss)
+        self._apply_brand_logo()
 
     def _apply_text_scale(self, scale: float) -> None:
         if self._app:
@@ -170,6 +189,24 @@ class MainWindow(QMainWindow):
             self._app.setFont(font)
         # refresh theme to apply new base font size token
         self._apply_theme(self.ui_service.theme, self.ui_service.profile)
+
+    def _apply_brand_logo(self) -> None:
+        """Decorate the central container with the chosen brand logo."""
+
+        if not hasattr(self, "central_widget"):
+            return
+        logo_path = BRANDING_DIR / f"{self.brand_mode}.svg"
+        if logo_path.exists():
+            stylesheet = (
+                "#CentralContainer {"
+                f" background-image: url({logo_path.as_posix()});"
+                " background-repeat: no-repeat;"
+                " background-position: center bottom;"
+                "}"
+            )
+        else:
+            stylesheet = "#CentralContainer { background-image: none; }"
+        self.central_widget.setStyleSheet(stylesheet)
 
 
 def main() -> None:
@@ -182,7 +219,20 @@ def main() -> None:
         profile=settings.get("theme_profile", "minimal"),
         large_text=large_text,
     )
-    window = MainWindow(ui_service, settings)
+    # Ensure the initial theme applies to dialogs before showing them
+    app.setStyleSheet(
+        theme_builder.generate(ui_service.profile, ui_service.theme, ui_service.text_scale)
+    )
+    font = app.font()
+    font.setPointSizeF(14 * ui_service.text_scale)
+    app.setFont(font)
+
+    selector = BrandSelectionDialog(ui_service)
+    if selector.exec_() != QDialog.Accepted or not selector.selection:
+        sys.exit(0)
+    brand_mode = selector.selection
+
+    window = MainWindow(ui_service, settings, brand_mode)
     window.resize(1280, 720)
     window.show()
     sys.exit(app.exec_())
