@@ -6,7 +6,16 @@ import sys
 
 from pathlib import Path
 
-from .qt import (
+
+if __package__ in (None, ""):
+    # When the application is executed as ``python app/main.py`` or when the
+    # PyInstaller bootstrapper runs ``main.py`` as a standalone script the
+    # interpreter does not treat ``app`` as a package. We gently add the
+    # repository root to ``sys.path`` so absolute imports keep working.
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+
+from app.qt import (
     QApplication,
     QButtonGroup,
     QDialog,
@@ -25,26 +34,23 @@ from .qt import (
     QWidget,
 )
 
-from .data import database
-from .services.settings_service import SettingsService
-from .services.ui_service import UIService
-from .ui.components.brand_selector import BrandSelectionDialog
-from .ui.components.command_palette import CommandPalette
-from .ui.components.toast import ToastManager
-from .ui.qss import theme_builder
-from .ui.pages.assignments import AssignmentsPage
-from .ui.pages.dashboard import DashboardPage
-from .ui.pages.documents import DocumentsPage
-from .ui.pages.drivers import DriversPage
-from .ui.pages.fines import FinesPage
-from .ui.pages.maintenance_lite import MaintenanceLitePage
-from .ui.pages.recycle_bin import RecycleBinPage
-from .ui.pages.reports import ReportsPage
-from .ui.pages.settings import SettingsPage
-from .ui.pages.vehicles import VehiclesPage
-
-
-from .services.settings_service import CONFIG_PATH
+from app.data import database, migrations, migrations_lite, seed
+from app.services.settings_service import CONFIG_PATH, SettingsService
+from app.services.ui_service import UIService
+from app.ui.components.brand_selector import BrandSelectionDialog
+from app.ui.components.command_palette import CommandPalette
+from app.ui.components.toast import ToastManager
+from app.ui.qss import theme_builder
+from app.ui.pages.assignments import AssignmentsPage
+from app.ui.pages.dashboard import DashboardPage
+from app.ui.pages.documents import DocumentsPage
+from app.ui.pages.drivers import DriversPage
+from app.ui.pages.fines import FinesPage
+from app.ui.pages.maintenance_lite import MaintenanceLitePage
+from app.ui.pages.recycle_bin import RecycleBinPage
+from app.ui.pages.reports import ReportsPage
+from app.ui.pages.settings import SettingsPage
+from app.ui.pages.vehicles import VehiclesPage
 
 ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 ICON_DIR = ASSETS_DIR / "icons"
@@ -237,6 +243,12 @@ def main() -> None:
     brand_mode = selector.selection
 
     database.set_brand_mode(brand_mode)
+    # Ensure the required schema objects exist before services query them. The
+    # migrations are idempotent so calling them on each launch keeps both KNK
+    # and NKK environments aligned without manual intervention.
+    migrations.run()
+    migrations_lite.run()
+    seed.run()
     settings = SettingsService()
     stored_language = settings.get("default_language", defaults.get("default_language", "tr"))
     stored_theme = settings.get("default_theme", defaults.get("default_theme", "light"))
