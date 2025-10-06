@@ -1,2 +1,7 @@
-node_modules/
-.env
+__pycache__/
+backups/
+exports/
+*.pyc
+/dist/
+/build/
+*.spec
