@@ -23,5 +23,5 @@ class MaintenanceRepository(Repository):
 
     def mark_done(self, reminder_id: int) -> None:
         with get_connection() as conn:
-            conn.execute("UPDATE maintenance_reminders SET done = 1 WHERE id = ?", (reminder_id,))
+            conn.execute(f"UPDATE {self.table} SET done = 1 WHERE id = ?", (reminder_id,))
             conn.commit()

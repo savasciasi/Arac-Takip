@@ -20,9 +20,19 @@ DB_PORT=3306
 DB_USER=d03ce6af
 DB_PASSWORD=214151Kka
 DB_NAME_TEMPLATE=d03ce6af_{brand}
+# Paylaşımlı host kullanıyorsanız ve yeni veritabanı açma yetkiniz yoksa mevcut
+# şemayı buraya yazın. Uygulama tabloları `knk_`/`nkk_` ön ekiyle aynı şema içinde
+# oluşturur.
+# DB_SHARED_NAME=d03ce6af
 ```
 
-Şema adı şablonundaki `{brand}` yer tutucusu KNK ve NKK markaları için otomatik olarak değiştirilir. İlk kurulumda MySQL’de `d03ce6af_knk` ve `d03ce6af_nkk` şemalarını oluşturduktan sonra migration ve seed komutlarını çalıştırın:
+Şema adı şablonundaki `{brand}` yer tutucusu KNK ve NKK markaları için otomatik olarak değiştirilir. MySQL kullanıcınız `CREATE DATABASE` yetkisine sahipse `d03ce6af_knk` ve `d03ce6af_nkk` şemaları otomatik oluşturulur. Eğer phpMyAdmin
+`#1044 - Access denied for user ... to database ...` hatası veriyorsa iki seçenek vardır:
+
+1. Sunucu yöneticinizden her marka için ayrı şema açmasını isteyin.
+2. `DB_SHARED_NAME` değişkenini mevcut şemanıza (ör. `d03ce6af`) ayarlayın ve `app/integrations/phpmyadmin_schema.sql` dosyasındaki `CREATE DATABASE/USE` satırlarını kaldırıp tek şema içinde `knk_` ve `nkk_` ön ekli tabloları oluşturun.
+
+Migration ve seed komutları her iki marka için de aynı şekilde çalışır:
 
 ```bash
 APP_BRAND=knk python -m app.data.migrations

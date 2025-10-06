@@ -2,6 +2,12 @@
 -- Import this script to provision two independent MySQL databases that mirror the
 -- SQLite layout used inside the desktop application. Each brand receives its own
 -- schema so records never overlap between KNK and NKK deployments.
+--
+-- NOTE: Shared hosting panelleri sıklıkla CREATE DATABASE yetkisini kapatır.
+-- Bu durumda aşağıdaki CREATE DATABASE/USE satırlarını kaldırıp "USE mevcut_db;"
+-- satırı ile değiştirerek tek bir şema içerisinde `knk_` ve `nkk_` ön ekli tablolar
+-- oluşturabilirsiniz. Uygulamada `DB_SHARED_NAME` ortam değişkenini bu şemaya
+-- ayarlamak marka başına ayrı tablo kullanımı için yeterlidir.
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;

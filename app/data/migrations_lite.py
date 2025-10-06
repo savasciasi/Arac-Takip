@@ -1,7 +1,7 @@
 """Lite-feature migrations such as seed settings and helper indexes."""
 from __future__ import annotations
 
-from .database import current_database, get_connection
+from .database import current_database, get_connection, table_name
 
 
 DEFAULT_SETTINGS = {
@@ -20,7 +20,7 @@ def seed_settings() -> None:
     with get_connection() as conn:
         for key, value in DEFAULT_SETTINGS.items():
             conn.execute(
-                "INSERT INTO app_settings(`key`, value) VALUES(%s, %s) "
+                f"INSERT INTO {table_name('app_settings')}(`key`, value) VALUES(%s, %s) "
                 "ON DUPLICATE KEY UPDATE value = VALUES(value)",
                 (key, value),
             )
@@ -30,16 +30,18 @@ def seed_settings() -> None:
 def ensure_indexes() -> None:
     """Create indexes used by the lite features."""
     with get_connection() as conn:
+        assignments_table = table_name("vehicle_assignments")
+        maintenance_table = table_name("maintenance_reminders")
         indexes = [
             (
-                "vehicle_assignments",
+                assignments_table,
                 "idx_assignments_vehicle",
-                "CREATE INDEX idx_assignments_vehicle ON vehicle_assignments(vehicle_id)",
+                f"CREATE INDEX idx_assignments_vehicle ON {assignments_table}(vehicle_id)",
             ),
             (
-                "maintenance_reminders",
+                maintenance_table,
                 "idx_maintenance_next_date",
-                "CREATE INDEX idx_maintenance_next_date ON maintenance_reminders(next_date)",
+                f"CREATE INDEX idx_maintenance_next_date ON {maintenance_table}(next_date)",
             ),
         ]
         for table, name, ddl in indexes:

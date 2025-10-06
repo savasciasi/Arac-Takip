@@ -5,7 +5,7 @@ from dataclasses import fields
 from datetime import datetime
 from typing import Any, Iterable, List, Optional, Sequence, Type, TypeVar
 
-from ..data.database import current_database, get_connection
+from ..data.database import current_database, get_connection, table_name
 
 T = TypeVar("T")
 
@@ -18,7 +18,8 @@ class Repository:
     fields: Sequence[str]
 
     def __init__(self, table: str, model: Type[T]) -> None:
-        self.table = table
+        self.base_table = table
+        self.table = table_name(table)
         self.model = model
         self.columns = self._load_columns()
         model_fields = [f.name for f in fields(model) if f.init and f.name != "id"]

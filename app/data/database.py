@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping, Sequence
 
 import mysql.connector
+from mysql.connector import errorcode
 
 
 STORAGE_ROOT = Path(__file__).resolve().parents[1] / "storage"
@@ -17,9 +18,11 @@ DB_PORT = int(os.getenv("DB_PORT", "3306"))
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 DB_NAME_TEMPLATE = os.getenv("DB_NAME_TEMPLATE", "aractakip_{brand}")
+DB_SHARED_NAME = os.getenv("DB_SHARED_NAME")
 
 _current_brand = ""
 _current_database = ""
+_table_prefix = ""
 
 
 def _normalise_brand(brand: str) -> str:
@@ -62,34 +65,90 @@ def _resolve_database_name(brand: str) -> str:
 def _ensure_database_exists(name: str) -> None:
     """Create the database if it does not already exist."""
 
-    admin = mysql.connector.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        charset="utf8mb4",
-        autocommit=True,
-    )
+    admin = None
     try:
+        admin = mysql.connector.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            charset="utf8mb4",
+            autocommit=True,
+        )
         cursor = admin.cursor()
-        cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{name}` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-        cursor.close()
+        try:
+            cursor.execute(
+                f"CREATE DATABASE IF NOT EXISTS `{name}` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+            )
+        finally:
+            cursor.close()
+    except mysql.connector.Error as exc:
+        if exc.errno == errorcode.ER_DBACCESS_DENIED_ERROR:
+            # Shared hosting environments often disallow CREATE DATABASE. If the
+            # schema already exists the connection below will succeed and we can
+            # continue silently; otherwise we raise a clearer error for the user.
+            try:
+                probe = mysql.connector.connect(
+                    host=DB_HOST,
+                    port=DB_PORT,
+                    user=DB_USER,
+                    password=DB_PASSWORD,
+                    database=name,
+                    charset="utf8mb4",
+                )
+                probe.close()
+            except mysql.connector.Error as probe_exc:  # pragma: no cover - env specific
+                raise RuntimeError(
+                    "MySQL kullanıcı hesabının yeni veritabanı oluşturma yetkisi yok ve "
+                    f"'{name}' şeması bulunamadı. Lütfen phpMyAdmin üzerinden şemayı el ile oluşturun "
+                    "veya sistem yöneticinizden yetki isteyin."
+                ) from probe_exc
+        else:  # pragma: no cover - unexpected MySQL error
+            raise
     finally:
-        admin.close()
+        if admin is not None:
+            admin.close()
+
+
+def _verify_database(name: str) -> None:
+    """Ensure the provided database/schema is reachable by the user."""
+
+    try:
+        probe = mysql.connector.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=name,
+            charset="utf8mb4",
+        )
+        probe.close()
+    except mysql.connector.Error as exc:  # pragma: no cover - environment specific
+        raise RuntimeError(
+            f"'{name}' şemasına bağlanılamadı. Lütfen DB_HOST/DB_USER ayarlarınızı doğrulayın."
+        ) from exc
 
 
 def set_brand_mode(brand: str) -> str:
     """Switch database/storage roots to the provided brand."""
 
-    global _current_brand, _current_database
+    global _current_brand, _current_database, _table_prefix
     _current_brand = _normalise_brand(brand)
-    _current_database = _resolve_database_name(_current_brand)
+    target_database = _resolve_database_name(_current_brand)
     try:
-        _ensure_database_exists(_current_database)
-    except mysql.connector.Error as exc:  # pragma: no cover - environment specific
-        raise RuntimeError(
-            f"Unable to connect to MySQL at {DB_HOST}:{DB_PORT} for database '{_current_database}'."
-        ) from exc
+        _ensure_database_exists(target_database)
+        _verify_database(target_database)
+        _current_database = target_database
+        _table_prefix = ""
+    except RuntimeError as exc:
+        if not DB_SHARED_NAME:
+            raise RuntimeError(
+                "MySQL şeması oluşturulamadı. CREATE DATABASE yetkiniz yoksa mevcut şemanızı "
+                "DB_SHARED_NAME değişkeniyle belirtmeniz gerekir."
+            ) from exc
+        _verify_database(DB_SHARED_NAME)
+        _current_database = DB_SHARED_NAME
+        _table_prefix = f"{_current_brand}_"
     return _current_database
 
 
@@ -103,6 +162,18 @@ def current_database() -> str:
     """Return the active MySQL schema name."""
 
     return _current_database
+
+
+def table_prefix() -> str:
+    """Expose the active table prefix (empty when dedicated schemas are used)."""
+
+    return _table_prefix
+
+
+def table_name(base: str) -> str:
+    """Return the fully qualified table name for the active brand."""
+
+    return f"{_table_prefix}{base}"
 
 
 class Row(dict):

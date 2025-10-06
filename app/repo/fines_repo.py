@@ -25,17 +25,20 @@ class FineRepository(Repository):
     def summary(self) -> Dict[str, float]:
         """Return summary totals for dashboard cards."""
         with get_connection() as conn:
+            table = self.table
             totals = {
-                "total": conn.execute("SELECT COALESCE(SUM(amount),0) FROM fines WHERE is_deleted = 0").fetchone()[0],
+                "total": conn.execute(
+                    f"SELECT COALESCE(SUM(amount),0) FROM {table} WHERE is_deleted = 0"
+                ).fetchone()[0],
                 "open": conn.execute(
-                    "SELECT COALESCE(SUM(amount),0) FROM fines WHERE status = 'OPEN' AND is_deleted = 0"
+                    f"SELECT COALESCE(SUM(amount),0) FROM {table} WHERE status = 'OPEN' AND is_deleted = 0"
                 ).fetchone()[0],
                 "month": conn.execute(
-                    "SELECT COALESCE(SUM(amount),0) FROM fines WHERE DATE_FORMAT(date, '%Y-%m') = %s AND is_deleted = 0",
+                    f"SELECT COALESCE(SUM(amount),0) FROM {table} WHERE DATE_FORMAT(date, '%Y-%m') = %s AND is_deleted = 0",
                     (datetime.utcnow().strftime("%Y-%m"),),
                 ).fetchone()[0],
                 "year": conn.execute(
-                    "SELECT COALESCE(SUM(amount),0) FROM fines WHERE DATE_FORMAT(date, '%Y') = %s AND is_deleted = 0",
+                    f"SELECT COALESCE(SUM(amount),0) FROM {table} WHERE DATE_FORMAT(date, '%Y') = %s AND is_deleted = 0",
                     (datetime.utcnow().strftime("%Y"),),
                 ).fetchone()[0],
             }

@@ -5,7 +5,7 @@ from datetime import date, timedelta
 
 from pathlib import Path
 
-from .database import current_brand, get_connection
+from .database import current_brand, get_connection, table_name
 
 
 VEHICLES = [
@@ -46,48 +46,55 @@ MAINTENANCE = [
 def run() -> None:
     """Insert seed rows if tables are empty."""
     with get_connection() as conn:
-        cur = conn.execute("SELECT COUNT(*) FROM vehicles")
+        vehicles_table = table_name("vehicles")
+        drivers_table = table_name("drivers")
+        fines_table = table_name("fines")
+        documents_table = table_name("documents")
+        assignments_table = table_name("vehicle_assignments")
+        maintenance_table = table_name("maintenance_reminders")
+
+        cur = conn.execute(f"SELECT COUNT(*) FROM {vehicles_table}")
         if cur.fetchone()[0] == 0:
             conn.executemany(
-                "INSERT INTO vehicles(plate, brand, model, year, notes) VALUES(%s,%s,%s,%s,%s)",
+                f"INSERT INTO {vehicles_table}(plate, brand, model, year, notes) VALUES(%s,%s,%s,%s,%s)",
                 VEHICLES,
             )
 
-        cur = conn.execute("SELECT COUNT(*) FROM drivers")
+        cur = conn.execute(f"SELECT COUNT(*) FROM {drivers_table}")
         if cur.fetchone()[0] == 0:
             conn.executemany(
-                "INSERT INTO drivers(first_name, last_name, phone, license_no, notes) VALUES(%s,%s,%s,%s,%s)",
+                f"INSERT INTO {drivers_table}(first_name, last_name, phone, license_no, notes) VALUES(%s,%s,%s,%s,%s)",
                 DRIVERS,
             )
 
-        cur = conn.execute("SELECT COUNT(*) FROM fines")
+        cur = conn.execute(f"SELECT COUNT(*) FROM {fines_table}")
         if cur.fetchone()[0] == 0:
             conn.executemany(
-                """
-                INSERT INTO fines(vehicle_id, driver_id, fine_no, date, amount, description, status, payment_date, attachments_json)
+                f"""
+                INSERT INTO {fines_table}(vehicle_id, driver_id, fine_no, date, amount, description, status, payment_date, attachments_json)
                 VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """,
                 FINES,
             )
 
-        cur = conn.execute("SELECT COUNT(*) FROM documents")
+        cur = conn.execute(f"SELECT COUNT(*) FROM {documents_table}")
         if cur.fetchone()[0] == 0:
             conn.executemany(
-                "INSERT INTO documents(vehicle_id, driver_id, title, path, preview_path, tags) VALUES(%s,%s,%s,%s,%s,%s)",
+                f"INSERT INTO {documents_table}(vehicle_id, driver_id, title, path, preview_path, tags) VALUES(%s,%s,%s,%s,%s,%s)",
                 DOCUMENTS,
             )
 
-        cur = conn.execute("SELECT COUNT(*) FROM vehicle_assignments")
+        cur = conn.execute(f"SELECT COUNT(*) FROM {assignments_table}")
         if cur.fetchone()[0] == 0:
             conn.executemany(
-                "INSERT INTO vehicle_assignments(vehicle_id, driver_id, from_date, to_date, notes) VALUES(%s,%s,%s,%s,%s)",
+                f"INSERT INTO {assignments_table}(vehicle_id, driver_id, from_date, to_date, notes) VALUES(%s,%s,%s,%s,%s)",
                 ASSIGNMENTS,
             )
 
-        cur = conn.execute("SELECT COUNT(*) FROM maintenance_reminders")
+        cur = conn.execute(f"SELECT COUNT(*) FROM {maintenance_table}")
         if cur.fetchone()[0] == 0:
             conn.executemany(
-                "INSERT INTO maintenance_reminders(vehicle_id, title, next_date, done, notes) VALUES(%s,%s,%s,%s,%s)",
+                f"INSERT INTO {maintenance_table}(vehicle_id, title, next_date, done, notes) VALUES(%s,%s,%s,%s,%s)",
                 MAINTENANCE,
             )
 

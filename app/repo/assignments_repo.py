@@ -16,7 +16,7 @@ class AssignmentRepository(Repository):
     def active_for_vehicle(self, vehicle_id: int) -> VehicleAssignment | None:
         with get_connection() as conn:
             cur = conn.execute(
-                "SELECT * FROM vehicle_assignments WHERE vehicle_id = ? AND to_date IS NULL ORDER BY from_date DESC LIMIT 1",
+                f"SELECT * FROM {self.table} WHERE vehicle_id = ? AND to_date IS NULL ORDER BY from_date DESC LIMIT 1",
                 (vehicle_id,),
             )
             row = cur.fetchone()
@@ -26,9 +26,7 @@ class AssignmentRepository(Repository):
         """Return active assignments keyed by vehicle id for quick lookup."""
 
         with get_connection() as conn:
-            cur = conn.execute(
-                "SELECT * FROM vehicle_assignments WHERE to_date IS NULL"
-            )
+            cur = conn.execute(f"SELECT * FROM {self.table} WHERE to_date IS NULL")
             rows = cur.fetchall()
         return {row["vehicle_id"]: self._row_to_model(row) for row in rows}
 
@@ -37,7 +35,7 @@ class AssignmentRepository(Repository):
 
         with get_connection() as conn:
             cur = conn.execute(
-                "SELECT * FROM vehicle_assignments WHERE to_date IS NULL AND driver_id IS NOT NULL"
+                f"SELECT * FROM {self.table} WHERE to_date IS NULL AND driver_id IS NOT NULL"
             )
             rows = cur.fetchall()
         return {row["driver_id"]: self._row_to_model(row) for row in rows}
@@ -48,7 +46,7 @@ class AssignmentRepository(Repository):
     def close_active(self, vehicle_id: int, to_date: str) -> None:
         with get_connection() as conn:
             conn.execute(
-                "UPDATE vehicle_assignments SET to_date = ? WHERE vehicle_id = ? AND to_date IS NULL",
+                f"UPDATE {self.table} SET to_date = ? WHERE vehicle_id = ? AND to_date IS NULL",
                 (to_date, vehicle_id),
             )
             conn.commit()
