@@ -1,0 +1,86 @@
+
+/* Generated theme */
+QWidget {
+    background: #f4f6fb;
+    color: #1d1f24;
+    font-family: "Segoe UI", "Helvetica Neue", Arial;
+}
+
+QFrame#Card, QWidget#Card {
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.05);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+}
+
+QPushButton {
+    border-radius: 8px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    transition: all 160ms ease;
+}
+
+QPushButton[variant="primary"] {
+    background: #2f80ed;
+    color: #fff;
+    border: none;
+}
+
+QPushButton[variant="secondary"] {
+    background: #6c5ce7;
+    color: #fff;
+    border: none;
+}
+
+QPushButton[variant="destructive"] {
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+}
+
+QPushButton:hover {
+    background-color: rgba(255,255,255,0.08);
+}
+
+QPushButton:pressed {
+    transform: translateY(1px);
+    opacity: 0.9;
+}
+
+QPushButton:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.12);
+}
+
+QLineEdit, QDateEdit, QTextEdit, QComboBox {
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    padding: 8px;
+}
+
+QTableView {
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    gridline-color: rgba(15, 23, 42, 0.08);
+    selection-background-color: rgba(47, 128, 237, 0.12);
+}
+
+QHeaderView::section {
+    background: rgba(15, 23, 42, 0.04);
+    border: none;
+    padding: 4px;
+}
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 12px;
+    margin: 4px 0 4px 0;
+}
+
+QScrollBar::handle:vertical {
+    background: rgba(15, 23, 42, 0.25);
+    border-radius: 4px;
+}
