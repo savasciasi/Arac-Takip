@@ -31,11 +31,11 @@ class FineRepository(Repository):
                     "SELECT COALESCE(SUM(amount),0) FROM fines WHERE status = 'OPEN' AND is_deleted = 0"
                 ).fetchone()[0],
                 "month": conn.execute(
-                    "SELECT COALESCE(SUM(amount),0) FROM fines WHERE strftime('%Y-%m', date) = ? AND is_deleted = 0",
+                    "SELECT COALESCE(SUM(amount),0) FROM fines WHERE DATE_FORMAT(date, '%Y-%m') = %s AND is_deleted = 0",
                     (datetime.utcnow().strftime("%Y-%m"),),
                 ).fetchone()[0],
                 "year": conn.execute(
-                    "SELECT COALESCE(SUM(amount),0) FROM fines WHERE strftime('%Y', date) = ? AND is_deleted = 0",
+                    "SELECT COALESCE(SUM(amount),0) FROM fines WHERE DATE_FORMAT(date, '%Y') = %s AND is_deleted = 0",
                     (datetime.utcnow().strftime("%Y"),),
                 ).fetchone()[0],
             }

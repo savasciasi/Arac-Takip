@@ -1,7 +1,7 @@
 """Lite-feature migrations such as seed settings and helper indexes."""
 from __future__ import annotations
 
-from .database import get_connection
+from .database import current_database, get_connection
 
 
 DEFAULT_SETTINGS = {
@@ -20,8 +20,8 @@ def seed_settings() -> None:
     with get_connection() as conn:
         for key, value in DEFAULT_SETTINGS.items():
             conn.execute(
-                "INSERT INTO app_settings(key, value) VALUES(?, ?) "
-                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                "INSERT INTO app_settings(`key`, value) VALUES(%s, %s) "
+                "ON DUPLICATE KEY UPDATE value = VALUES(value)",
                 (key, value),
             )
         conn.commit()
@@ -30,12 +30,25 @@ def seed_settings() -> None:
 def ensure_indexes() -> None:
     """Create indexes used by the lite features."""
     with get_connection() as conn:
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_assignments_vehicle ON vehicle_assignments(vehicle_id)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_maintenance_next_date ON maintenance_reminders(next_date)"
-        )
+        indexes = [
+            (
+                "vehicle_assignments",
+                "idx_assignments_vehicle",
+                "CREATE INDEX idx_assignments_vehicle ON vehicle_assignments(vehicle_id)",
+            ),
+            (
+                "maintenance_reminders",
+                "idx_maintenance_next_date",
+                "CREATE INDEX idx_maintenance_next_date ON maintenance_reminders(next_date)",
+            ),
+        ]
+        for table, name, ddl in indexes:
+            exists = conn.execute(
+                "SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND INDEX_NAME = %s",
+                (current_database(), table, name),
+            ).fetchone()
+            if not exists:
+                conn.execute(ddl)
         conn.commit()
 
 

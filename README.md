@@ -12,8 +12,17 @@ pip install -r requirements.txt
 
 ## Veritabanı Kurulumu
 
-Marka bazlı çalışma nedeniyle her veritabanı dosyası kendi klasöründe tutulur (`app/storage/knk/app.db`, `app/storage/nkk/app.db`).
-Kurulum sırasında her marka için migration ve seed komutlarını çalıştırın:
+Tüm veriler MySQL üzerinde tutulur ve phpMyAdmin ile yönetilebilir. `.env` dosyanızı aşağıdaki değişkenlerle güncelleyin (örnek değerler `app/.env.example` içinde yer alır):
+
+```
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=d03ce6af
+DB_PASSWORD=214151Kka
+DB_NAME_TEMPLATE=d03ce6af_{brand}
+```
+
+Şema adı şablonundaki `{brand}` yer tutucusu KNK ve NKK markaları için otomatik olarak değiştirilir. İlk kurulumda MySQL’de `d03ce6af_knk` ve `d03ce6af_nkk` şemalarını oluşturduktan sonra migration ve seed komutlarını çalıştırın:
 
 ```bash
 APP_BRAND=knk python -m app.data.migrations
@@ -31,7 +40,7 @@ APP_BRAND=nkk python -m app.data.seed
 python -m app.main
 ```
 
-Uygulama açılırken KNK veya NKK markasını seçmeniz istenir. Seçime göre aktif veritabanı `app/storage/<marka>/app.db` dosyasına bağlanır ve tüm dosya yüklemeleri `app/storage/<marka>/` altında saklanır. Arka plan logosu da aynı seçime göre otomatik güncellenir. Logo dosyaları `app/assets/branding/` klasöründe bulunduğundan, kendi logolarınız ile kolayca değiştirebilirsiniz.
+Uygulama açılırken KNK veya NKK markasını seçmeniz istenir. Seçime göre aktif MySQL veritabanına bağlanılır ve dosya yüklemeleri `app/storage/<marka>/` altında saklanır. Arka plan logosu da aynı seçime göre otomatik güncellenir. Logo dosyaları `app/assets/branding/` klasöründe bulunduğundan, kendi logolarınız ile kolayca değiştirebilirsiniz.
 
 ## Paketleme
 
@@ -45,8 +54,8 @@ Oluşan `dist/AracTakip` klasörü çalıştırılabilir uygulamayı içerir.
 
 ## Yedekleme / Geri Yükleme
 
-- **Yedekleme:** Ayarlar sayfasından “Yedek Oluştur” butonu ile aktif markaya özel `backups/<marka>/backup_YYYYMMDD_HHMM.zip` arşivi oluşturulur.
-- **Geri Yükleme:** Aynı sayfada “Yedekten Geri Yükle” butonu son alınan yedeği doğrulayarak geri yükler ve işlem öncesinde aynı marka klasörü altında otomatik `pre_restore_*.zip` dosyası oluşturulur.
+- **Yedekleme:** Ayarlar sayfasından “Yedek Oluştur” butonu ile aktif markaya özel `backups/<marka>/backup_YYYYMMDD_HHMM.zip` arşivi oluşturulur. Arşivde `database.sql` MySQL dökümü ve `storage/<marka>/` klasörü yer alır.
+- **Geri Yükleme:** Aynı sayfada “Yedekten Geri Yükle” butonu son alınan yedeği doğrulayarak SQL dökümünü uygular ve işlem öncesinde otomatik `pre_restore_*.zip` dosyası üretir.
 
 ## Özellikler
 

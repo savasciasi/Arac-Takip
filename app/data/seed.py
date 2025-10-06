@@ -49,14 +49,14 @@ def run() -> None:
         cur = conn.execute("SELECT COUNT(*) FROM vehicles")
         if cur.fetchone()[0] == 0:
             conn.executemany(
-                "INSERT INTO vehicles(plate, brand, model, year, notes) VALUES(?,?,?,?,?)",
+                "INSERT INTO vehicles(plate, brand, model, year, notes) VALUES(%s,%s,%s,%s,%s)",
                 VEHICLES,
             )
 
         cur = conn.execute("SELECT COUNT(*) FROM drivers")
         if cur.fetchone()[0] == 0:
             conn.executemany(
-                "INSERT INTO drivers(first_name, last_name, phone, license_no, notes) VALUES(?,?,?,?,?)",
+                "INSERT INTO drivers(first_name, last_name, phone, license_no, notes) VALUES(%s,%s,%s,%s,%s)",
                 DRIVERS,
             )
 
@@ -65,7 +65,7 @@ def run() -> None:
             conn.executemany(
                 """
                 INSERT INTO fines(vehicle_id, driver_id, fine_no, date, amount, description, status, payment_date, attachments_json)
-                VALUES(?,?,?,?,?,?,?,?,?)
+                VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """,
                 FINES,
             )
@@ -73,21 +73,21 @@ def run() -> None:
         cur = conn.execute("SELECT COUNT(*) FROM documents")
         if cur.fetchone()[0] == 0:
             conn.executemany(
-                "INSERT INTO documents(vehicle_id, driver_id, title, path, preview_path, tags) VALUES(?,?,?,?,?,?)",
+                "INSERT INTO documents(vehicle_id, driver_id, title, path, preview_path, tags) VALUES(%s,%s,%s,%s,%s,%s)",
                 DOCUMENTS,
             )
 
         cur = conn.execute("SELECT COUNT(*) FROM vehicle_assignments")
         if cur.fetchone()[0] == 0:
             conn.executemany(
-                "INSERT INTO vehicle_assignments(vehicle_id, driver_id, from_date, to_date, notes) VALUES(?,?,?,?,?)",
+                "INSERT INTO vehicle_assignments(vehicle_id, driver_id, from_date, to_date, notes) VALUES(%s,%s,%s,%s,%s)",
                 ASSIGNMENTS,
             )
 
         cur = conn.execute("SELECT COUNT(*) FROM maintenance_reminders")
         if cur.fetchone()[0] == 0:
             conn.executemany(
-                "INSERT INTO maintenance_reminders(vehicle_id, title, next_date, done, notes) VALUES(?,?,?,?,?)",
+                "INSERT INTO maintenance_reminders(vehicle_id, title, next_date, done, notes) VALUES(%s,%s,%s,%s,%s)",
                 MAINTENANCE,
             )
 

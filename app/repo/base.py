@@ -1,11 +1,11 @@
-"""Repository helpers built on top of SQLite."""
+"""Repository helpers built on top of MySQL while mimicking sqlite API."""
 from __future__ import annotations
 
 from dataclasses import fields
 from datetime import datetime
 from typing import Any, Iterable, List, Optional, Sequence, Type, TypeVar
 
-from ..data.database import get_connection
+from ..data.database import current_database, get_connection
 
 T = TypeVar("T")
 
@@ -28,11 +28,15 @@ class Repository:
             self.fields = model_fields
 
     def _load_columns(self) -> set[str]:
-        """Read column names from SQLite so transient fields are ignored."""
+        """Read column names from MySQL so transient fields are ignored."""
+
         try:
             with get_connection() as conn:
-                cursor = conn.execute(f"PRAGMA table_info({self.table})")
-                return {row[1] for row in cursor.fetchall()}
+                cursor = conn.execute(
+                    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s",
+                    (current_database(), self.table),
+                )
+                return {row["COLUMN_NAME"] for row in cursor.fetchall()}
         except Exception:
             return set()
 

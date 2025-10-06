@@ -15,6 +15,6 @@ class DriverRepository(Repository):
     def search_by_name(self, text: str) -> List[Driver]:
         like = f"%{text.lower()}%"
         return self.search(
-            "LOWER(first_name || ' ' || last_name) LIKE ? AND is_deleted = 0",
+            "LOWER(CONCAT_WS(' ', first_name, last_name)) LIKE ? AND is_deleted = 0",
             (like,),
         )

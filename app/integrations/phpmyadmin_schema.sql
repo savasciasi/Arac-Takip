@@ -9,8 +9,8 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ---------------------------------------------------------------------------
 -- KNK database
 -- ---------------------------------------------------------------------------
-CREATE DATABASE IF NOT EXISTS fleet_knk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE fleet_knk;
+CREATE DATABASE IF NOT EXISTS d03ce6af_knk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE d03ce6af_knk;
 
 CREATE TABLE IF NOT EXISTS vehicles (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS fines (
   description TEXT NULL,
   status ENUM('OPEN','PAID','DISPUTED') NOT NULL DEFAULT 'OPEN',
   payment_date DATE NULL,
-  attachments_json JSON NOT NULL DEFAULT (JSON_ARRAY()),
+  attachments_json TEXT NOT NULL DEFAULT '[]',
   is_deleted TINYINT(1) NOT NULL DEFAULT 0,
   deleted_at DATETIME NULL,
   deleted_by VARCHAR(64) NULL,
@@ -125,8 +125,8 @@ CREATE TABLE IF NOT EXISTS app_settings (
 -- ---------------------------------------------------------------------------
 -- NKK database
 -- ---------------------------------------------------------------------------
-CREATE DATABASE IF NOT EXISTS fleet_nkk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE fleet_nkk;
+CREATE DATABASE IF NOT EXISTS d03ce6af_nkk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE d03ce6af_nkk;
 
 CREATE TABLE IF NOT EXISTS vehicles (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS fines (
   description TEXT NULL,
   status ENUM('OPEN','PAID','DISPUTED') NOT NULL DEFAULT 'OPEN',
   payment_date DATE NULL,
-  attachments_json JSON NOT NULL DEFAULT (JSON_ARRAY()),
+  attachments_json TEXT NOT NULL DEFAULT '[]',
   is_deleted TINYINT(1) NOT NULL DEFAULT 0,
   deleted_at DATETIME NULL,
   deleted_by VARCHAR(64) NULL,

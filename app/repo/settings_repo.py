@@ -13,14 +13,14 @@ class SettingsRepository:
 
     def as_dict(self) -> Dict[str, str]:
         with get_connection() as conn:
-            cur = conn.execute("SELECT key, value FROM app_settings")
+            cur = conn.execute("SELECT `key`, value FROM app_settings")
             return {row[0]: row[1] for row in cur.fetchall()}
 
     def upsert(self, setting: AppSetting) -> None:
         with get_connection() as conn:
             conn.execute(
-                "INSERT INTO app_settings(key, value) VALUES(?, ?) "
-                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                "INSERT INTO app_settings(`key`, value) VALUES(%s, %s) "
+                "ON DUPLICATE KEY UPDATE value = VALUES(value)",
                 (setting.key, setting.value),
             )
             conn.commit()
