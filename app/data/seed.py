@@ -1,0 +1,92 @@
+"""Seed the database with demo data for development and tests."""
+from __future__ import annotations
+
+from datetime import date, timedelta
+
+from .database import get_connection
+
+
+VEHICLES = [
+    ("34ABC123", "Ford", "Transit", 2020, "Soğuk zincir aracı"),
+    ("06XYZ789", "Mercedes", "Sprinter", 2019, "Uzun yol aracı"),
+]
+
+DRIVERS = [
+    ("Ali", "Kaya", "+90 533 000 11 22", "TR123456", "Gece vardiyası"),
+    ("Hans", "Zimmer", "+49 170 000 44 55", "DE987654", "Almanya hattı"),
+]
+
+FINES = [
+    (1, 1, "F-2023001", date.today().isoformat(), 150.0, "Hız sınırı", "OPEN", None, "[]"),
+    (2, 2, "F-2023002", (date.today() - timedelta(days=10)).isoformat(), 320.0, "Park yasağı", "PAID", (date.today() - timedelta(days=5)).isoformat(), "[]"),
+]
+
+DOCUMENTS = [
+    (1, None, "Sigorta Poliçesi", "storage/insurance.pdf", None, "sigorta"),
+    (None, 1, "Ehliyet Fotokopisi", "storage/license_ali.jpg", None, "kimlik"),
+]
+
+ASSIGNMENTS = [
+    (1, 1, (date.today() - timedelta(days=30)).isoformat(), None, "Aktif"),
+    (2, 2, (date.today() - timedelta(days=15)).isoformat(), None, "Aktif"),
+]
+
+MAINTENANCE = [
+    (1, "Periyodik bakım", (date.today() + timedelta(days=7)).isoformat(), 0, "Yağ değişimi"),
+    (2, "Muayene", (date.today() + timedelta(days=1)).isoformat(), 0, "Genel kontrol"),
+]
+
+
+def run() -> None:
+    """Insert seed rows if tables are empty."""
+    with get_connection() as conn:
+        cur = conn.execute("SELECT COUNT(*) FROM vehicles")
+        if cur.fetchone()[0] == 0:
+            conn.executemany(
+                "INSERT INTO vehicles(plate, brand, model, year, notes) VALUES(?,?,?,?,?)",
+                VEHICLES,
+            )
+
+        cur = conn.execute("SELECT COUNT(*) FROM drivers")
+        if cur.fetchone()[0] == 0:
+            conn.executemany(
+                "INSERT INTO drivers(first_name, last_name, phone, license_no, notes) VALUES(?,?,?,?,?)",
+                DRIVERS,
+            )
+
+        cur = conn.execute("SELECT COUNT(*) FROM fines")
+        if cur.fetchone()[0] == 0:
+            conn.executemany(
+                """
+                INSERT INTO fines(vehicle_id, driver_id, fine_no, date, amount, description, status, payment_date, attachments_json)
+                VALUES(?,?,?,?,?,?,?,?,?)
+                """,
+                FINES,
+            )
+
+        cur = conn.execute("SELECT COUNT(*) FROM documents")
+        if cur.fetchone()[0] == 0:
+            conn.executemany(
+                "INSERT INTO documents(vehicle_id, driver_id, title, path, preview_path, tags) VALUES(?,?,?,?,?,?)",
+                DOCUMENTS,
+            )
+
+        cur = conn.execute("SELECT COUNT(*) FROM vehicle_assignments")
+        if cur.fetchone()[0] == 0:
+            conn.executemany(
+                "INSERT INTO vehicle_assignments(vehicle_id, driver_id, from_date, to_date, notes) VALUES(?,?,?,?,?)",
+                ASSIGNMENTS,
+            )
+
+        cur = conn.execute("SELECT COUNT(*) FROM maintenance_reminders")
+        if cur.fetchone()[0] == 0:
+            conn.executemany(
+                "INSERT INTO maintenance_reminders(vehicle_id, title, next_date, done, notes) VALUES(?,?,?,?,?)",
+                MAINTENANCE,
+            )
+
+        conn.commit()
+
+
+if __name__ == "__main__":
+    run()

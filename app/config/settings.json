@@ -1,0 +1,9 @@
+{
+  "default_language": "tr",
+  "default_theme": "light",
+  "theme_profile": "minimal",
+  "large_text": false,
+  "high_fine_amount": 250,
+  "upcoming_days": 14,
+  "date_format": "DD.MM.YYYY"
+}

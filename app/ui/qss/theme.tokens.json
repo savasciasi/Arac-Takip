@@ -1,0 +1,94 @@
+{
+  "profiles": {
+    "minimal": {
+      "color": {
+        "bg": "#f4f6fb",
+        "card": "#ffffff",
+        "text": "#1d1f24",
+        "muted": "#6d7485",
+        "accent": {
+          "primary": "#2f80ed",
+          "secondary": "#6c5ce7",
+          "destructive": "#e74c3c"
+        }
+      },
+      "radius": {
+        "md": "8px",
+        "xl": "18px"
+      },
+      "shadow": {
+        "sm": "0 2px 8px rgba(15, 23, 42, 0.12)",
+        "lg": "0 10px 30px rgba(15, 23, 42, 0.18)"
+      },
+      "space": {
+        "2": "4px",
+        "4": "8px",
+        "8": "16px"
+      },
+      "opacity": {
+        "focus": 0.12,
+        "hover": 0.08
+      }
+    },
+    "glass": {
+      "color": {
+        "bg": "#e6ecff",
+        "card": "rgba(255,255,255,0.65)",
+        "text": "#0f172a",
+        "muted": "#475569",
+        "accent": {
+          "primary": "#2563eb",
+          "secondary": "#38bdf8",
+          "destructive": "#f43f5e"
+        }
+      },
+      "radius": {
+        "md": "12px",
+        "xl": "22px"
+      },
+      "shadow": {
+        "sm": "0 4px 16px rgba(15, 23, 42, 0.15)",
+        "lg": "0 25px 40px rgba(30, 64, 175, 0.2)"
+      },
+      "space": {
+        "2": "6px",
+        "4": "12px",
+        "8": "18px"
+      },
+      "opacity": {
+        "focus": 0.18,
+        "hover": 0.12
+      }
+    },
+    "contrast": {
+      "color": {
+        "bg": "#111827",
+        "card": "#1f2937",
+        "text": "#f9fafb",
+        "muted": "#cbd5f5",
+        "accent": {
+          "primary": "#f59e0b",
+          "secondary": "#22d3ee",
+          "destructive": "#ef4444"
+        }
+      },
+      "radius": {
+        "md": "6px",
+        "xl": "16px"
+      },
+      "shadow": {
+        "sm": "0 2px 12px rgba(15, 23, 42, 0.45)",
+        "lg": "0 30px 60px rgba(0, 0, 0, 0.6)"
+      },
+      "space": {
+        "2": "4px",
+        "4": "10px",
+        "8": "20px"
+      },
+      "opacity": {
+        "focus": 0.22,
+        "hover": 0.16
+      }
+    }
+  }
+}
