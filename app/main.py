@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -48,6 +48,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.settings_service = settings_service
         self.ui_service = ui_service
+        self._app = QApplication.instance()
         self.setWindowTitle(self.ui_service.t("app.title"))
         central = QWidget()
         self.setCentralWidget(central)
@@ -74,6 +75,10 @@ class MainWindow(QMainWindow):
         self._bind_shortcuts()
         first_key = next(iter(self._pages))
         self._navigate(first_key)
+        self.ui_service.theme_changed.connect(self._apply_theme)
+        self.ui_service.text_scale_changed.connect(self._apply_text_scale)
+        self._apply_text_scale(self.ui_service.text_scale)
+        self._apply_theme(self.ui_service.theme, self.ui_service.profile)
 
     def _register_pages(self) -> None:
         pages = [
@@ -150,16 +155,31 @@ class MainWindow(QMainWindow):
         button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         return button
 
+    def _apply_theme(self, theme: str, profile: str) -> None:
+        if not self._app:
+            return
+        qss = theme_builder.generate(profile, theme, self.ui_service.text_scale)
+        self._app.setStyleSheet(qss)
+
+    def _apply_text_scale(self, scale: float) -> None:
+        if self._app:
+            font = QFont(self._app.font())
+            font.setPointSizeF(14 * scale)
+            self._app.setFont(font)
+        # refresh theme to apply new base font size token
+        self._apply_theme(self.ui_service.theme, self.ui_service.profile)
+
 
 def main() -> None:
     app = QApplication(sys.argv)
     settings = SettingsService()
+    large_text = settings.get("large_text", "false").lower() == "true"
     ui_service = UIService(
         language=settings.get("default_language", "tr"),
         theme=settings.get("default_theme", "light"),
         profile=settings.get("theme_profile", "minimal"),
+        large_text=large_text,
     )
-    app.setStyleSheet(theme_builder.generate(ui_service.profile))
     window = MainWindow(ui_service, settings)
     window.resize(1280, 720)
     window.show()

@@ -2,21 +2,23 @@
 from __future__ import annotations
 
 import json
+import shutil
 from datetime import date
 from pathlib import Path
 from typing import Optional
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QStandardItem, QStandardItemModel
+from PyQt5.QtCore import Qt, QUrl
+from PyQt5.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import (
     QComboBox,
     QDateEdit,
     QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
+    QListWidget,
+    QListWidgetItem,
     QLabel,
     QLineEdit,
-    QListWidget,
     QMessageBox,
     QPushButton,
     QTableView,
@@ -31,8 +33,13 @@ from ...repo.fines_repo import FineRepository
 from ...repo.vehicles_repo import VehicleRepository
 from ...services.exporter import Exporter
 from ...services.ui_service import UIService
+from ..components.file_picker import FilePicker
 from ..widgets.modal import ModalDialog
 from .base_page import BasePage
+
+
+ID_ROLE = Qt.UserRole
+ATTACHMENT_DIR = Path(__file__).resolve().parents[2] / "storage" / "fines"
 
 
 class FinesPage(BasePage):
@@ -46,6 +53,7 @@ class FinesPage(BasePage):
         self.vehicle_repo = VehicleRepository()
         self.driver_repo = DriverRepository()
         self.exporter = Exporter()
+        self.file_picker = FilePicker(self)
         layout = QVBoxLayout(self)
         self.header = QLabel()
         filter_row = QHBoxLayout()
@@ -70,11 +78,19 @@ class FinesPage(BasePage):
         layout.addWidget(self.header)
         layout.addLayout(button_row)
         layout.addWidget(self.table)
+        self.attachment_label = QLabel()
+        self.attachment_label.setProperty("role", "muted")
+        self.attachment_list = QListWidget()
+        self.attachment_list.setObjectName("FineAttachments")
+        layout.addWidget(self.attachment_label)
+        layout.addWidget(self.attachment_list)
         self.add_btn.clicked.connect(self.add_fine)
         self.edit_btn.clicked.connect(self.edit_selected)
         self.delete_btn.clicked.connect(self.delete_selected)
         self.export_csv_btn.clicked.connect(self.export_csv)
         self.export_pdf_btn.clicked.connect(self.export_pdf)
+        self.table.selectionModel().currentChanged.connect(self._update_attachment_panel)
+        self.attachment_list.itemDoubleClicked.connect(self._open_attachment)
 
         self._vehicles: list = []
         self._drivers: list = []
@@ -178,8 +194,9 @@ class FinesPage(BasePage):
             row.append(attachment_item)
             for item in row:
                 item.setEditable(False)
-            row[0].setData(fine.id)
+            row[0].setData(fine.id, ID_ROLE)
             self.model.appendRow(row)
+        self._update_attachment_panel()
 
     def _fine_form(self, fine: Optional[Fine] = None) -> Fine | None:
         dialog_widget = QWidget()
@@ -201,6 +218,7 @@ class FinesPage(BasePage):
         )
         description = QTextEdit(fine.description if fine else "")
         attachments = QListWidget()
+        attachments.setSelectionMode(QListWidget.ExtendedSelection)
         existing = json.loads(fine.attachments_json or "[]") if fine else []
         for path in existing:
             attachments.addItem(path)
@@ -238,7 +256,30 @@ class FinesPage(BasePage):
         form.addRow(self.ui_service.t("fines.form.status"), status)
         form.addRow(self.ui_service.t("fines.form.payment_date"), payment_date)
         form.addRow(self.ui_service.t("fines.form.description"), description)
-        form.addRow(self.ui_service.t("fines.form.attachments"), attachments)
+        attachment_container = QWidget()
+        attachment_layout = QVBoxLayout(attachment_container)
+        attachment_layout.setContentsMargins(0, 0, 0, 0)
+        attachment_layout.addWidget(attachments)
+        attachment_buttons = QHBoxLayout()
+        add_attachment_btn = QPushButton(self.ui_service.t("fines.attachments.add"))
+        remove_attachment_btn = QPushButton(self.ui_service.t("fines.attachments.remove"))
+        attachment_buttons.addWidget(add_attachment_btn)
+        attachment_buttons.addWidget(remove_attachment_btn)
+        attachment_layout.addLayout(attachment_buttons)
+        form.addRow(self.ui_service.t("fines.form.attachments"), attachment_container)
+
+        def _add_attachment() -> None:
+            file_path = self.file_picker.open(self.ui_service.t("filepicker.title"))
+            if file_path:
+                stored = self._persist_attachment(file_path)
+                attachments.addItem(stored)
+
+        def _remove_attachment() -> None:
+            for item in attachments.selectedItems():
+                attachments.takeItem(attachments.row(item))
+
+        add_attachment_btn.clicked.connect(_add_attachment)
+        remove_attachment_btn.clicked.connect(_remove_attachment)
         dialog = ModalDialog(dialog_widget, self)
         if dialog.exec_() == ModalDialog.Accepted:
             if vehicle_combo.count() == 0 or driver_combo.count() == 0:
@@ -273,7 +314,9 @@ class FinesPage(BasePage):
         index = self.table.currentIndex()
         if not index.isValid():
             return
-        fine_id = index.sibling(index.row(), 0).data()
+        fine_id = index.sibling(index.row(), 0).data(ID_ROLE)
+        if fine_id is None:
+            return
         fine = self.repo.get(int(fine_id))
         if not fine:
             return
@@ -299,9 +342,47 @@ class FinesPage(BasePage):
         index = self.table.currentIndex()
         if not index.isValid():
             return
-        fine_id = index.sibling(index.row(), 0).data()
+        fine_id = index.sibling(index.row(), 0).data(ID_ROLE)
+        if fine_id is None:
+            return
         self.repo.soft_delete(int(fine_id))
         self.refresh()
+
+    def _current_fine_id(self) -> Optional[int]:
+        selection = self.table.selectionModel().currentIndex()
+        if not selection.isValid():
+            return None
+        value = selection.sibling(selection.row(), 0).data(ID_ROLE)
+        return int(value) if value is not None else None
+
+    def _update_attachment_panel(self, *_) -> None:
+        self.attachment_list.clear()
+        fine_id = self._current_fine_id()
+        if fine_id is None:
+            return
+        fine = self.repo.get(fine_id)
+        if not fine:
+            return
+        for path in json.loads(fine.attachments_json or "[]"):
+            item = QListWidgetItem(path)
+            item.setToolTip(path)
+            item.setData(ID_ROLE, path)
+            self.attachment_list.addItem(item)
+
+    def _open_attachment(self, item: QListWidgetItem) -> None:
+        path = item.data(ID_ROLE)
+        if path and Path(path).exists():
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).resolve())))
+
+    def _persist_attachment(self, source: Path) -> str:
+        ATTACHMENT_DIR.mkdir(parents=True, exist_ok=True)
+        destination = ATTACHMENT_DIR / source.name
+        counter = 1
+        while destination.exists():
+            destination = ATTACHMENT_DIR / f"{source.stem}_{counter}{source.suffix}"
+            counter += 1
+        shutil.copy2(source, destination)
+        return str(destination)
 
     def export_csv(self) -> None:
         headers = [self.model.headerData(i, Qt.Horizontal) for i in range(self.model.columnCount())]
@@ -335,3 +416,4 @@ class FinesPage(BasePage):
             self.ui_service.t("fines.form.attachments"),
         ])
         self.refresh()
+        self.attachment_label.setText(self.ui_service.t("fines.attachments.title"))

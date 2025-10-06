@@ -20,12 +20,21 @@ class UIService(QObject):
 
     language_changed = pyqtSignal(str)
     theme_changed = pyqtSignal(str, str)
+    text_scale_changed = pyqtSignal(float)
 
-    def __init__(self, language: str = "tr", theme: str = "light", profile: str = "minimal") -> None:
+    def __init__(
+        self,
+        language: str = "tr",
+        theme: str = "light",
+        profile: str = "minimal",
+        large_text: bool = False,
+    ) -> None:
         super().__init__()
         self.language = language
         self.theme = theme
         self.profile = profile
+        self.large_text = large_text
+        self.text_scale = 1.2 if large_text else 1.0
         self._translations: Dict[str, Dict[str, str]] = {}
         self.features = json.loads(FEATURES_PATH.read_text(encoding="utf-8"))
         self.shortcuts = json.loads(SHORTCUTS_PATH.read_text(encoding="utf-8"))
@@ -50,10 +59,20 @@ class UIService(QObject):
         if theme != self.theme or profile != self.profile:
             self.theme = theme
             self.profile = profile
-            qss = theme_builder.generate(profile)
+            qss = theme_builder.generate(profile, theme, self.text_scale)
             self.theme_changed.emit(theme, profile)
             return qss
-        return theme_builder.generate(profile)
+        return theme_builder.generate(profile, theme, self.text_scale)
+
+    def set_text_scale(self, large_text: bool) -> float:
+        new_scale = 1.2 if large_text else 1.0
+        if abs(new_scale - self.text_scale) > 1e-3:
+            self.large_text = large_text
+            self.text_scale = new_scale
+            self.text_scale_changed.emit(new_scale)
+            # Regenerate theme so font-size tokens refresh immediately
+            self.theme_changed.emit(self.theme, self.profile)
+        return self.text_scale
 
     def shortcut_descriptions(self) -> list[dict[str, str]]:
         return self.shortcuts

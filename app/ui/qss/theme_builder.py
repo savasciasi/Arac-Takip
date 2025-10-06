@@ -1,7 +1,12 @@
-"""Runtime QSS builder that maps design tokens to themed style sheets."""
+"""Runtime theme builder that converts tokens into QSS."""
+
+from __future__ import annotations
+
 import json
 from pathlib import Path
 from string import Template
+
+BASE_FONT_SIZE = 14
 
 TEMPLATE = Template(
     """
@@ -10,6 +15,7 @@ QWidget {
     background: $bg;
     color: $text;
     font-family: "Segoe UI", "Helvetica Neue", Arial;
+    font-size: $font_size;
 }
 
 QFrame#Card, QWidget#Card {
@@ -102,7 +108,7 @@ QLabel[role="card-title"] {
 }
 
 QLabel[role="muted"] {
-    color: rgba(29, 31, 36, 0.65);
+    color: $muted;
 }
 
 QTableView {
@@ -133,35 +139,48 @@ QScrollBar::handle:vertical {
 )
 
 
-def generate(profile: str, output: Path | None = None) -> str:
-    """Generate QSS string for a given profile and optionally save it."""
+def _load_tokens() -> dict[str, dict[str, dict[str, object]]]:
     token_path = Path(__file__).with_name("theme.tokens.json")
     data = json.loads(token_path.read_text(encoding="utf-8"))
-    profiles = data.get("profiles", {})
-    if profile not in profiles:
+    return data.get("profiles", {})
+
+
+def generate(profile: str, theme: str = "light", text_scale: float = 1.0, output: Path | None = None) -> str:
+    """Generate QSS string for a given profile and optionally save it."""
+
+    profiles = _load_tokens()
+    profile_tokens = profiles.get(profile)
+    if not profile_tokens:
         raise KeyError(f"Unknown profile: {profile}")
 
-    tokens = profiles[profile]
-    accent = tokens["color"]["accent"]
+    theme_tokens = profile_tokens.get(theme)
+    if not theme_tokens:
+        raise KeyError(f"Profile '{profile}' does not define theme '{theme}'")
+
+    accent = theme_tokens["color"]["accent"]
+    font_px = f"{int(round(BASE_FONT_SIZE * max(text_scale, 0.5)))}px"
     mapping = {
-        "bg": tokens["color"]["bg"],
-        "card": tokens["color"]["card"],
-        "text": tokens["color"]["text"],
-        "radius_md": tokens["radius"]["md"],
-        "radius_xl": tokens["radius"]["xl"],
-        "shadow_sm": tokens["shadow"]["sm"],
-        "shadow_lg": tokens["shadow"]["lg"],
-        "space_2": tokens["space"]["2"],
-        "space_4": tokens["space"]["4"],
-        "space_8": tokens["space"]["8"],
+        "bg": theme_tokens["color"]["bg"],
+        "card": theme_tokens["color"]["card"],
+        "text": theme_tokens["color"]["text"],
+        "muted": theme_tokens["color"].get("muted", "#6b7280"),
+        "radius_md": theme_tokens["radius"]["md"],
+        "radius_xl": theme_tokens["radius"]["xl"],
+        "shadow_sm": theme_tokens["shadow"]["sm"],
+        "shadow_lg": theme_tokens["shadow"]["lg"],
+        "space_2": theme_tokens["space"]["2"],
+        "space_4": theme_tokens["space"]["4"],
+        "space_8": theme_tokens["space"]["8"],
         "accent_primary": accent["primary"],
         "accent_secondary": accent["secondary"],
         "accent_destructive": accent["destructive"],
-        "focus": tokens["opacity"]["focus"],
-        "hover": tokens["opacity"]["hover"],
+        "focus": theme_tokens["opacity"]["focus"],
+        "hover": theme_tokens["opacity"]["hover"],
+        "font_size": font_px,
     }
 
     qss = TEMPLATE.substitute(mapping)
+    token_path = Path(__file__).with_name("theme.tokens.json")
     out_path = output or token_path.with_name("theme.qss")
     out_path.write_text(qss, encoding="utf-8")
     return qss

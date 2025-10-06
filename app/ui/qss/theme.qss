@@ -4,6 +4,7 @@ QWidget {
     background: #f4f6fb;
     color: #1d1f24;
     font-family: "Segoe UI", "Helvetica Neue", Arial;
+    font-size: 14px;
 }
 
 QFrame#Card, QWidget#Card {

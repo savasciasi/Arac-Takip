@@ -15,3 +15,9 @@ class DocumentRepository(Repository):
     def search_text(self, text: str) -> List[Document]:
         like = f"%{text.lower()}%"
         return self.search("LOWER(title) LIKE ? AND is_deleted = 0", (like,))
+
+    def for_vehicle(self, vehicle_id: int) -> List[Document]:
+        return self.search("vehicle_id = ? AND is_deleted = 0", (vehicle_id,))
+
+    def for_driver(self, driver_id: int) -> List[Document]:
+        return self.search("driver_id = ? AND is_deleted = 0", (driver_id,))
