@@ -12,7 +12,7 @@ from ...qt import (
     QWidget,
 )
 
-from ...services.backup_service import BackupService, BACKUP_DIR
+from ...services.backup_service import BackupService, brand_backup_dir
 from ...services.settings_service import SettingsService
 from ...services.ui_service import UIService
 from .base_page import BasePage
@@ -86,7 +86,7 @@ class SettingsPage(BasePage):
 
     def restore_backup(self) -> None:
         # In real scenario prompt for file path; using latest backup for demo
-        backups = sorted(BACKUP_DIR.glob("backup_*.zip"), reverse=True)
+        backups = sorted(brand_backup_dir().glob("backup_*.zip"), reverse=True)
         if backups:
             self.backup.restore_backup(backups[0])
 

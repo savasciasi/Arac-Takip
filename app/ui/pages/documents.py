@@ -24,6 +24,7 @@ from ...qt import (
     QWidget,
 )
 
+from ...data.database import storage_path
 from ...models.document import Document
 from ...repo.documents_repo import DocumentRepository
 from ...repo.drivers_repo import DriverRepository
@@ -32,8 +33,6 @@ from ...services.ui_service import UIService
 from ..components.file_picker import FilePicker
 from ..widgets.modal import ModalDialog
 from .base_page import BasePage
-
-STORAGE_DIR = Path(__file__).resolve().parents[2] / "storage"
 ID_ROLE = Qt.UserRole
 
 
@@ -220,11 +219,11 @@ class DocumentsPage(BasePage):
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).resolve())))
 
     def _persist_file(self, original: Path) -> tuple[str, Optional[str]]:
-        STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-        destination = STORAGE_DIR / original.name
+        storage_dir = storage_path("documents", ensure=True)
+        destination = storage_dir / original.name
         counter = 1
         while destination.exists():
-            destination = STORAGE_DIR / f"{original.stem}_{counter}{original.suffix}"
+            destination = storage_dir / f"{original.stem}_{counter}{original.suffix}"
             counter += 1
         shutil.copy2(original, destination)
         preview_path = None

@@ -30,6 +30,7 @@ from ...qt import (
     QWidget,
 )
 
+from ...data.database import storage_path
 from ...models.fine import Fine
 from ...repo.drivers_repo import DriverRepository
 from ...repo.fines_repo import FineRepository
@@ -42,7 +43,6 @@ from .base_page import BasePage
 
 
 ID_ROLE = Qt.UserRole
-ATTACHMENT_DIR = Path(__file__).resolve().parents[2] / "storage" / "fines"
 
 
 class FinesPage(BasePage):
@@ -378,11 +378,11 @@ class FinesPage(BasePage):
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).resolve())))
 
     def _persist_attachment(self, source: Path) -> str:
-        ATTACHMENT_DIR.mkdir(parents=True, exist_ok=True)
-        destination = ATTACHMENT_DIR / source.name
+        attachment_dir = storage_path("fines", ensure=True)
+        destination = attachment_dir / source.name
         counter = 1
         while destination.exists():
-            destination = ATTACHMENT_DIR / f"{source.stem}_{counter}{source.suffix}"
+            destination = attachment_dir / f"{source.stem}_{counter}{source.suffix}"
             counter += 1
         shutil.copy2(source, destination)
         return str(destination)

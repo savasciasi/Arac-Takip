@@ -1,6 +1,7 @@
 """Application entry point for Fleet & Fine Management."""
 from __future__ import annotations
 
+import json
 import sys
 
 from pathlib import Path
@@ -24,6 +25,7 @@ from .qt import (
     QWidget,
 )
 
+from .data import database
 from .services.settings_service import SettingsService
 from .services.ui_service import UIService
 from .ui.components.brand_selector import BrandSelectionDialog
@@ -41,6 +43,8 @@ from .ui.pages.reports import ReportsPage
 from .ui.pages.settings import SettingsPage
 from .ui.pages.vehicles import VehiclesPage
 
+
+from .services.settings_service import CONFIG_PATH
 
 ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 ICON_DIR = ASSETS_DIR / "icons"
@@ -211,15 +215,15 @@ class MainWindow(QMainWindow):
 
 def main() -> None:
     app = QApplication(sys.argv)
-    settings = SettingsService()
-    large_text = settings.get("large_text", "false").lower() == "true"
+    defaults = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    large_text_default = str(defaults.get("large_text", "false")).lower() == "true"
     ui_service = UIService(
-        language=settings.get("default_language", "tr"),
-        theme=settings.get("default_theme", "light"),
-        profile=settings.get("theme_profile", "minimal"),
-        large_text=large_text,
+        language=defaults.get("default_language", "tr"),
+        theme=defaults.get("default_theme", "light"),
+        profile=defaults.get("theme_profile", "minimal"),
+        large_text=large_text_default,
     )
-    # Ensure the initial theme applies to dialogs before showing them
+    # Apply baseline theme so the brand selector inherits the styling.
     app.setStyleSheet(
         theme_builder.generate(ui_service.profile, ui_service.theme, ui_service.text_scale)
     )
@@ -231,6 +235,20 @@ def main() -> None:
     if selector.exec_() != QDialog.Accepted or not selector.selection:
         sys.exit(0)
     brand_mode = selector.selection
+
+    database.set_brand_mode(brand_mode)
+    settings = SettingsService()
+    stored_language = settings.get("default_language", defaults.get("default_language", "tr"))
+    stored_theme = settings.get("default_theme", defaults.get("default_theme", "light"))
+    stored_profile = settings.get("theme_profile", defaults.get("theme_profile", "minimal"))
+    stored_large_text = settings.get("large_text", str(large_text_default)).lower() == "true"
+    ui_service.set_language(stored_language)
+    ui_service.set_text_scale(stored_large_text)
+    qss = ui_service.set_theme(stored_theme, stored_profile)
+    app.setStyleSheet(qss)
+    font = app.font()
+    font.setPointSizeF(14 * ui_service.text_scale)
+    app.setFont(font)
 
     window = MainWindow(ui_service, settings, brand_mode)
     window.resize(1280, 720)

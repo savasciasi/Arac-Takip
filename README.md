@@ -12,10 +12,17 @@ pip install -r requirements.txt
 
 ## Veritabanı Kurulumu
 
+Marka bazlı çalışma nedeniyle her veritabanı dosyası kendi klasöründe tutulur (`app/storage/knk/app.db`, `app/storage/nkk/app.db`).
+Kurulum sırasında her marka için migration ve seed komutlarını çalıştırın:
+
 ```bash
-python -m app.data.migrations
-python -m app.data.migrations_lite
-python -m app.data.seed
+APP_BRAND=knk python -m app.data.migrations
+APP_BRAND=knk python -m app.data.migrations_lite
+APP_BRAND=knk python -m app.data.seed
+
+APP_BRAND=nkk python -m app.data.migrations
+APP_BRAND=nkk python -m app.data.migrations_lite
+APP_BRAND=nkk python -m app.data.seed
 ```
 
 ## Çalıştırma
@@ -24,7 +31,7 @@ python -m app.data.seed
 python -m app.main
 ```
 
-Uygulama açılırken KNK veya NKK markasını seçmeniz istenir. Seçime göre ana arka plan logosu otomatik uygulanır. Logo dosyaları `app/assets/branding/` klasöründe bulunduğundan, kendi logolarınız ile kolayca değiştirebilirsiniz.
+Uygulama açılırken KNK veya NKK markasını seçmeniz istenir. Seçime göre aktif veritabanı `app/storage/<marka>/app.db` dosyasına bağlanır ve tüm dosya yüklemeleri `app/storage/<marka>/` altında saklanır. Arka plan logosu da aynı seçime göre otomatik güncellenir. Logo dosyaları `app/assets/branding/` klasöründe bulunduğundan, kendi logolarınız ile kolayca değiştirebilirsiniz.
 
 ## Paketleme
 
@@ -38,8 +45,8 @@ Oluşan `dist/AracTakip` klasörü çalıştırılabilir uygulamayı içerir.
 
 ## Yedekleme / Geri Yükleme
 
-- **Yedekleme:** Ayarlar sayfasından “Yedek Oluştur” butonu ile `backups/backup_YYYYMMDD_HHMM.zip` oluşturulur.
-- **Geri Yükleme:** Aynı sayfada “Yedekten Geri Yükle” butonu son alınan yedeği doğrulayarak geri yükler ve işlem öncesinde otomatik `pre_restore_*.zip` dosyası oluşturulur.
+- **Yedekleme:** Ayarlar sayfasından “Yedek Oluştur” butonu ile aktif markaya özel `backups/<marka>/backup_YYYYMMDD_HHMM.zip` arşivi oluşturulur.
+- **Geri Yükleme:** Aynı sayfada “Yedekten Geri Yükle” butonu son alınan yedeği doğrulayarak geri yükler ve işlem öncesinde aynı marka klasörü altında otomatik `pre_restore_*.zip` dosyası oluşturulur.
 
 ## Özellikler
 
@@ -50,7 +57,7 @@ Oluşan `dist/AracTakip` klasörü çalıştırılabilir uygulamayı içerir.
 - CSV/PDF dışa aktarma, tablo düzeni kalıcılığı için JSON kayıt (basit örnek)
 - I18N desteği (Türkçe/Almanca) ve tema profilleri (minimal, glass, contrast)
 - Oturum açılışında marka seçimi (KNK/NKK) ve dinamik arka plan logosu
-- phpMyAdmin’e aktarmak için MySQL şeması (`app/integrations/phpmyadmin_schema.sql`)
+- phpMyAdmin’e aktarmak için KNK/NKK ayrı MySQL şemaları (`app/integrations/phpmyadmin_schema.sql`)
 
 ## Testler
 

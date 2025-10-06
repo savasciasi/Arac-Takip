@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from .database import get_connection
+from pathlib import Path
+
+from .database import current_brand, get_connection
 
 
 VEHICLES = [
@@ -21,9 +23,13 @@ FINES = [
     (2, 2, "F-2023002", (date.today() - timedelta(days=10)).isoformat(), 320.0, "Park yasağı", "PAID", (date.today() - timedelta(days=5)).isoformat(), "[]"),
 ]
 
+def _doc_path(name: str) -> str:
+    return str(Path("storage") / current_brand() / name)
+
+
 DOCUMENTS = [
-    (1, None, "Sigorta Poliçesi", "storage/insurance.pdf", None, "sigorta"),
-    (None, 1, "Ehliyet Fotokopisi", "storage/license_ali.jpg", None, "kimlik"),
+    (1, None, "Sigorta Poliçesi", _doc_path("insurance.pdf"), None, "sigorta"),
+    (None, 1, "Ehliyet Fotokopisi", _doc_path("license_ali.jpg"), None, "kimlik"),
 ]
 
 ASSIGNMENTS = [
