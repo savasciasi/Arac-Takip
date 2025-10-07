@@ -1,11 +1,18 @@
 """Base schema migrations for the fleet management database (MySQL)."""
 from __future__ import annotations
 
+import json
+import logging
 from datetime import datetime
-from .database import current_database, execute_script, get_connection, table_name, table_prefix
+
+from .database import current_brand, current_database, execute_script, get_connection, table_name, table_prefix
 from ..utils.runtime_paths import state_file
 
+logger = logging.getLogger(__name__)
+
 MIGRATIONS_LOG = state_file("migrations.log")
+SCHEMA_STATE = state_file("schema_state.json")
+SCHEMA_VERSION = 2
 
 
 def _schema_sql() -> str:
@@ -119,10 +126,34 @@ CREATE TABLE IF NOT EXISTS {tables['app_settings']} (
 """
 
 
+def _load_state() -> dict[str, dict[str, object]]:
+    try:
+        return json.loads(SCHEMA_STATE.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError:
+        return {}
+
+
+def _save_state(state: dict[str, dict[str, object]]) -> None:
+    SCHEMA_STATE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _state_key() -> str:
+    brand = current_brand() or "default"
+    return brand
+
+
 def mark_migrated() -> None:
-    """Persist the last run timestamp for bookkeeping."""
+    """Persist the last run timestamp and schema version for bookkeeping."""
 
     MIGRATIONS_LOG.write_text(datetime.utcnow().isoformat(), encoding="utf-8")
+    state = _load_state()
+    key = _state_key()
+    entry = state.setdefault(key, {})
+    entry["core_version"] = SCHEMA_VERSION
+    entry["core_updated_at"] = datetime.utcnow().isoformat()
+    _save_state(state)
 
 
 def _column_exists(table: str, column: str) -> bool:
@@ -199,6 +230,22 @@ def ensure_indexes() -> None:
 def run() -> None:
     """Apply initial schema and forward-compatible alterations."""
 
+    state = _load_state()
+    key = _state_key()
+    entry = state.get(key, {})
+    if entry.get("core_version") == SCHEMA_VERSION:
+        logger.info(
+            "Skipping core migrations for brand '%s'; schema version %s is up to date.",
+            key,
+            SCHEMA_VERSION,
+        )
+        return
+
+    logger.info(
+        "Applying core migrations for brand '%s' to reach schema version %s",
+        key,
+        SCHEMA_VERSION,
+    )
     execute_script(_schema_sql())
     ensure_columns()
     ensure_indexes()

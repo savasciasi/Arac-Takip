@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import mysql.connector
+    from mysql.connector import pooling
 except ModuleNotFoundError as exc:  # pragma: no cover - import guard
     raise RuntimeError(
         "MySQL sürücüsü bulunamadı. Lütfen `pip install mysql-connector-python` "
@@ -66,6 +67,67 @@ _current_brand = ""
 _current_database = ""
 _table_prefix = ""
 _brand_bootstrap_attempted = False
+_connection_pool: pooling.MySQLConnectionPool | None = None
+_pool_schema = ""
+
+
+def _reset_pool() -> None:
+    """Dispose of the current connection pool so the next call recreates it."""
+
+    global _connection_pool, _pool_schema
+    _connection_pool = None
+    _pool_schema = ""
+
+
+def _connection_config() -> dict[str, Any]:
+    """Return the keyword arguments used to establish MySQL connections."""
+
+    if not _current_database:
+        ensure_brand_mode()
+    if not _current_database:
+        raise RuntimeError("Database brand not initialised. Call set_brand_mode() first.")
+    return {
+        "host": DB_HOST,
+        "port": DB_PORT,
+        "user": DB_USER,
+        "password": DB_PASSWORD,
+        "database": _current_database,
+        "charset": "utf8mb4",
+        "autocommit": False,
+    }
+
+
+def _ensure_pool() -> pooling.MySQLConnectionPool:
+    """Create a reusable connection pool if one does not already exist."""
+
+    global _connection_pool, _pool_schema
+    if _connection_pool and _pool_schema == _current_database:
+        return _connection_pool
+    config = _connection_config()
+    pool_name = f"aractakip_{_current_brand or 'default'}"
+    _connection_pool = pooling.MySQLConnectionPool(
+        pool_name=pool_name,
+        pool_size=5,
+        pool_reset_session=True,
+        **config,
+    )
+    _pool_schema = _current_database
+    return _connection_pool
+
+
+def _get_pooled_connection() -> mysql.connector.MySQLConnection:
+    """Fetch a connection from the global pool creating it if necessary."""
+
+    try:
+        pool = _ensure_pool()
+        conn = pool.get_connection()
+    except mysql.connector.Error:
+        # Recreate the pool once in case the server dropped idle connections.
+        _reset_pool()
+        pool = _ensure_pool()
+        conn = pool.get_connection()
+    conn.autocommit = False
+    return conn
 
 
 def _normalise_brand(brand: str) -> str:
@@ -155,6 +217,7 @@ def set_brand_mode(brand: str) -> str:
     _verify_database(DB_SHARED_NAME)
     _current_database = DB_SHARED_NAME
     _table_prefix = f"{_current_brand}_"
+    _reset_pool()
     logger.info("Aktif tablo öneki '%s' olarak ayarlandı", _table_prefix)
     global _brand_bootstrap_attempted
     _brand_bootstrap_attempted = True
@@ -247,15 +310,7 @@ class ConnectionWrapper:
             ensure_brand_mode()
         if not _current_database:
             raise RuntimeError("Database brand not initialised. Call set_brand_mode() first.")
-        self._conn = mysql.connector.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=_current_database,
-            charset="utf8mb4",
-            autocommit=False,
-        )
+        self._conn = _get_pooled_connection()
 
     def __enter__(self) -> "ConnectionWrapper":
         return self

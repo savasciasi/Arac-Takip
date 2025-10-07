@@ -1,7 +1,17 @@
-"""Lite-feature migrations such as seed settings and helper indexes."""
+"""Lite feature migrations that run alongside the core schema setup."""
 from __future__ import annotations
 
-from .database import current_database, get_connection, table_name
+import json
+import logging
+from datetime import datetime
+
+from .database import current_brand, current_database, get_connection, table_name
+from ..utils.runtime_paths import state_file
+
+logger = logging.getLogger(__name__)
+
+LITE_STATE = state_file("schema_state.json")
+LITE_VERSION = 2
 
 
 DEFAULT_SETTINGS = {
@@ -11,12 +21,39 @@ DEFAULT_SETTINGS = {
     "large_text": "0",
     "high_fine_amount": "250",
     "upcoming_days": "14",
-    "date_format": "DD.MM.YYYY"
+    "date_format": "DD.MM.YYYY",
 }
 
 
+def _load_state() -> dict[str, dict[str, object]]:
+    try:
+        return json.loads(LITE_STATE.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError:
+        return {}
+
+
+def _save_state(state: dict[str, dict[str, object]]) -> None:
+    LITE_STATE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _state_key() -> str:
+    return current_brand() or "default"
+
+
+def _mark_lite_migrated() -> None:
+    state = _load_state()
+    key = _state_key()
+    entry = state.setdefault(key, {})
+    entry["lite_version"] = LITE_VERSION
+    entry["lite_updated_at"] = datetime.utcnow().isoformat()
+    _save_state(state)
+
+
 def seed_settings() -> None:
-    """Ensure required application settings exist."""
+    """Ensure required application settings exist without recreating connections."""
+
     with get_connection() as conn:
         for key, value in DEFAULT_SETTINGS.items():
             conn.execute(
@@ -29,6 +66,7 @@ def seed_settings() -> None:
 
 def ensure_indexes() -> None:
     """Create indexes used by the lite features."""
+
     with get_connection() as conn:
         assignments_table = table_name("vehicle_assignments")
         maintenance_table = table_name("maintenance_reminders")
@@ -46,7 +84,8 @@ def ensure_indexes() -> None:
         ]
         for table, name, ddl in indexes:
             exists = conn.execute(
-                "SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND INDEX_NAME = %s",
+                "SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS "
+                "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND INDEX_NAME = %s",
                 (current_database(), table, name),
             ).fetchone()
             if not exists:
@@ -55,9 +94,27 @@ def ensure_indexes() -> None:
 
 
 def run() -> None:
-    """Apply lite feature migrations."""
+    """Apply lite feature migrations only when the schema version changes."""
+
+    state = _load_state()
+    key = _state_key()
+    entry = state.get(key, {})
+    if entry.get("lite_version") == LITE_VERSION:
+        logger.info(
+            "Skipping lite migrations for brand '%s'; version %s is up to date.",
+            key,
+            LITE_VERSION,
+        )
+        return
+
+    logger.info(
+        "Applying lite migrations for brand '%s' to reach version %s",
+        key,
+        LITE_VERSION,
+    )
     seed_settings()
     ensure_indexes()
+    _mark_lite_migrated()
 
 
 if __name__ == "__main__":
