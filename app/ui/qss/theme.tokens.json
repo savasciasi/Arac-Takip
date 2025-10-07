@@ -1,0 +1,190 @@
+{
+  "profiles": {
+    "minimal": {
+      "light": {
+        "color": {
+          "bg": "#f4f6fb",
+          "card": "#ffffff",
+          "text": "#1d1f24",
+          "muted": "rgba(29, 31, 36, 0.65)",
+          "accent": {
+            "primary": "#2f80ed",
+            "secondary": "#6c5ce7",
+            "destructive": "#e74c3c"
+          }
+        },
+        "radius": {
+          "md": "8px",
+          "xl": "18px"
+        },
+        "shadow": {
+          "sm": "0 2px 8px rgba(15, 23, 42, 0.12)",
+          "lg": "0 10px 30px rgba(15, 23, 42, 0.18)"
+        },
+        "space": {
+          "2": "4px",
+          "4": "8px",
+          "8": "16px"
+        },
+        "opacity": {
+          "focus": 0.12,
+          "hover": 0.08
+        }
+      },
+      "dark": {
+        "color": {
+          "bg": "#0f172a",
+          "card": "#111c33",
+          "text": "#e2e8f0",
+          "muted": "rgba(148, 163, 184, 0.8)",
+          "accent": {
+            "primary": "#60a5fa",
+            "secondary": "#a855f7",
+            "destructive": "#f87171"
+          }
+        },
+        "radius": {
+          "md": "8px",
+          "xl": "18px"
+        },
+        "shadow": {
+          "sm": "0 4px 14px rgba(2, 6, 23, 0.6)",
+          "lg": "0 18px 40px rgba(2, 6, 23, 0.75)"
+        },
+        "space": {
+          "2": "4px",
+          "4": "8px",
+          "8": "16px"
+        },
+        "opacity": {
+          "focus": 0.25,
+          "hover": 0.16
+        }
+      }
+    },
+    "glass": {
+      "light": {
+        "color": {
+          "bg": "#e6ecff",
+          "card": "rgba(255,255,255,0.65)",
+          "text": "#0f172a",
+          "muted": "rgba(71, 85, 105, 0.85)",
+          "accent": {
+            "primary": "#2563eb",
+            "secondary": "#38bdf8",
+            "destructive": "#f43f5e"
+          }
+        },
+        "radius": {
+          "md": "12px",
+          "xl": "22px"
+        },
+        "shadow": {
+          "sm": "0 4px 16px rgba(15, 23, 42, 0.15)",
+          "lg": "0 25px 40px rgba(30, 64, 175, 0.2)"
+        },
+        "space": {
+          "2": "6px",
+          "4": "12px",
+          "8": "18px"
+        },
+        "opacity": {
+          "focus": 0.18,
+          "hover": 0.12
+        }
+      },
+      "dark": {
+        "color": {
+          "bg": "rgba(12, 20, 36, 0.95)",
+          "card": "rgba(30, 41, 59, 0.7)",
+          "text": "#f8fafc",
+          "muted": "rgba(203, 213, 225, 0.75)",
+          "accent": {
+            "primary": "#38bdf8",
+            "secondary": "#22d3ee",
+            "destructive": "#fb7185"
+          }
+        },
+        "radius": {
+          "md": "12px",
+          "xl": "22px"
+        },
+        "shadow": {
+          "sm": "0 6px 20px rgba(3, 7, 18, 0.5)",
+          "lg": "0 32px 60px rgba(2, 6, 23, 0.65)"
+        },
+        "space": {
+          "2": "6px",
+          "4": "12px",
+          "8": "18px"
+        },
+        "opacity": {
+          "focus": 0.28,
+          "hover": 0.18
+        }
+      }
+    },
+    "contrast": {
+      "light": {
+        "color": {
+          "bg": "#f1f5f9",
+          "card": "#e2e8f0",
+          "text": "#0f172a",
+          "muted": "rgba(71, 85, 105, 0.85)",
+          "accent": {
+            "primary": "#f59e0b",
+            "secondary": "#0ea5e9",
+            "destructive": "#ef4444"
+          }
+        },
+        "radius": {
+          "md": "6px",
+          "xl": "16px"
+        },
+        "shadow": {
+          "sm": "0 2px 12px rgba(15, 23, 42, 0.22)",
+          "lg": "0 20px 40px rgba(15, 23, 42, 0.28)"
+        },
+        "space": {
+          "2": "4px",
+          "4": "10px",
+          "8": "20px"
+        },
+        "opacity": {
+          "focus": 0.2,
+          "hover": 0.14
+        }
+      },
+      "dark": {
+        "color": {
+          "bg": "#111827",
+          "card": "#1f2937",
+          "text": "#f9fafb",
+          "muted": "rgba(203, 213, 225, 0.85)",
+          "accent": {
+            "primary": "#f59e0b",
+            "secondary": "#22d3ee",
+            "destructive": "#ef4444"
+          }
+        },
+        "radius": {
+          "md": "6px",
+          "xl": "16px"
+        },
+        "shadow": {
+          "sm": "0 2px 12px rgba(15, 23, 42, 0.45)",
+          "lg": "0 30px 60px rgba(0, 0, 0, 0.6)"
+        },
+        "space": {
+          "2": "4px",
+          "4": "10px",
+          "8": "20px"
+        },
+        "opacity": {
+          "focus": 0.22,
+          "hover": 0.16
+        }
+      }
+    }
+  }
+}
