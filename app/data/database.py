@@ -1,0 +1,447 @@
+"""MySQL connection helpers compatible with the original SQLite API."""
+from __future__ import annotations
+
+import logging
+import os
+import re
+from pathlib import Path
+from typing import Any, Iterable, Iterator, Mapping, Sequence
+
+logger = logging.getLogger(__name__)
+
+
+try:
+    import mysql.connector
+    from mysql.connector import pooling
+except ModuleNotFoundError as exc:  # pragma: no cover - import guard
+    raise RuntimeError(
+        "MySQL sürücüsü bulunamadı. Lütfen `pip install mysql-connector-python` "
+        "komutunu çalıştırın. Windows'ta `mysqlclient` derlemeye çalışmayın; bu paket "
+        "gerekmiyor."
+    ) from exc
+
+from ..utils.runtime_paths import storage_root as runtime_storage_root
+
+
+def _load_env_file() -> None:
+    """Populate ``os.environ`` from a local ``.env`` if present."""
+
+    env_path = Path(__file__).resolve().parents[2] / ".env"
+    if not env_path.exists():
+        return
+    try:
+        loaded_keys: list[str] = []
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            key, sep, value = line.partition("=")
+            if not sep:
+                continue
+            key = key.strip()
+            # keep trailing spaces inside quotes but strip outside
+            value = value.strip().strip("\"'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+                loaded_keys.append(key)
+        if loaded_keys:
+            logger.info("Loaded %s from .env", ", ".join(sorted(loaded_keys)))
+    except OSError:
+        # Reading a user-managed config should never crash the app; fall back to
+        # existing environment variables if the file is unreadable.
+        return
+
+
+_load_env_file()
+
+
+STORAGE_ROOT = runtime_storage_root()
+
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = int(os.getenv("DB_PORT", "3306"))
+DB_USER = os.getenv("DB_USER", "root")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DB_SHARED_NAME = os.getenv("DB_SHARED_NAME")
+
+_current_brand = ""
+_current_database = ""
+_table_prefix = ""
+_brand_bootstrap_attempted = False
+_connection_pool: pooling.MySQLConnectionPool | None = None
+_pool_schema = ""
+
+
+def _reset_pool() -> None:
+    """Dispose of the current connection pool so the next call recreates it."""
+
+    global _connection_pool, _pool_schema
+    _connection_pool = None
+    _pool_schema = ""
+
+
+def _connection_config() -> dict[str, Any]:
+    """Return the keyword arguments used to establish MySQL connections."""
+
+    if not _current_database:
+        ensure_brand_mode()
+    if not _current_database:
+        raise RuntimeError("Database brand not initialised. Call set_brand_mode() first.")
+    return {
+        "host": DB_HOST,
+        "port": DB_PORT,
+        "user": DB_USER,
+        "password": DB_PASSWORD,
+        "database": _current_database,
+        "charset": "utf8mb4",
+        "autocommit": False,
+    }
+
+
+def _ensure_pool() -> pooling.MySQLConnectionPool:
+    """Create a reusable connection pool if one does not already exist."""
+
+    global _connection_pool, _pool_schema
+    if _connection_pool and _pool_schema == _current_database:
+        return _connection_pool
+    config = _connection_config()
+    pool_name = f"aractakip_{_current_brand or 'default'}"
+    _connection_pool = pooling.MySQLConnectionPool(
+        pool_name=pool_name,
+        pool_size=5,
+        pool_reset_session=True,
+        **config,
+    )
+    _pool_schema = _current_database
+    return _connection_pool
+
+
+def _get_pooled_connection() -> mysql.connector.MySQLConnection:
+    """Fetch a connection from the global pool creating it if necessary."""
+
+    try:
+        pool = _ensure_pool()
+        conn = pool.get_connection()
+    except mysql.connector.Error:
+        # Recreate the pool once in case the server dropped idle connections.
+        _reset_pool()
+        pool = _ensure_pool()
+        conn = pool.get_connection()
+    conn.autocommit = False
+    return conn
+
+
+def _normalise_brand(brand: str) -> str:
+    """Return a filesystem friendly brand identifier."""
+
+    cleaned = "".join(ch for ch in brand.lower() if ch.isalnum())
+    return cleaned or "default"
+
+
+def _brand_directory(brand: str) -> Path:
+    directory = STORAGE_ROOT / brand
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+def storage_root(brand: str | None = None) -> Path:
+    """Return the storage directory for the given or active brand."""
+
+    code = _normalise_brand(brand or _current_brand)
+    return _brand_directory(code)
+
+
+def storage_path(*parts: str, brand: str | None = None, ensure: bool = False) -> Path:
+    """Build a path inside the active brand storage directory."""
+
+    base = storage_root(brand)
+    path = base.joinpath(*parts) if parts else base
+    if ensure:
+        path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _verify_database(name: str) -> None:
+    """Ensure the provided database/schema is reachable by the user."""
+
+    try:
+        probe = mysql.connector.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=name,
+            charset="utf8mb4",
+        )
+        probe.close()
+    except mysql.connector.Error as exc:  # pragma: no cover - environment specific
+        raise RuntimeError(
+            f"'{name}' şemasına bağlanılamadı. Lütfen DB_HOST/DB_USER ayarlarınızı doğrulayın."
+        ) from exc
+
+
+def _default_brand() -> str:
+    """Return the brand used when no explicit value was provided."""
+
+    return os.getenv("APP_BRAND", "knk")
+
+
+def ensure_brand_mode(default: str | None = None) -> None:
+    """Initialise the database prefix the first time it is requested."""
+
+    global _brand_bootstrap_attempted
+    if _current_database:
+        return
+    if _brand_bootstrap_attempted:
+        # A previous attempt failed; avoid infinite recursion and let callers
+        # deal with the absence of a configured database.
+        return
+    _brand_bootstrap_attempted = True
+    brand = default or _default_brand()
+    try:
+        set_brand_mode(brand)
+    except Exception:
+        _brand_bootstrap_attempted = False
+        raise
+
+
+def set_brand_mode(brand: str) -> str:
+    """Switch database/storage roots to the provided brand."""
+
+    global _current_brand, _current_database, _table_prefix
+    _current_brand = _normalise_brand(brand)
+    if not DB_SHARED_NAME:
+        raise RuntimeError(
+            "DB_SHARED_NAME tanımlı değil. Lütfen .env dosyanızda mevcut MySQL şemasını belirtin."
+        )
+    logger.info("Switching to brand '%s' using shared schema '%s'", _current_brand, DB_SHARED_NAME)
+    _verify_database(DB_SHARED_NAME)
+    _current_database = DB_SHARED_NAME
+    _table_prefix = f"{_current_brand}_"
+    _reset_pool()
+    logger.info("Aktif tablo öneki '%s' olarak ayarlandı", _table_prefix)
+    global _brand_bootstrap_attempted
+    _brand_bootstrap_attempted = True
+    return _current_database
+
+
+def current_brand() -> str:
+    """Expose the active brand code for other modules."""
+
+    if not _current_brand:
+        try:
+            ensure_brand_mode()
+        except Exception:
+            return _current_brand
+    return _current_brand
+
+
+def current_database() -> str:
+    """Return the active MySQL schema name."""
+
+    if not _current_database:
+        ensure_brand_mode()
+    return _current_database
+
+
+def table_prefix() -> str:
+    """Expose the active table prefix (empty when dedicated schemas are used)."""
+
+    if not _table_prefix:
+        ensure_brand_mode()
+    return _table_prefix
+
+
+def table_name(base: str) -> str:
+    """Return the fully qualified table name for the active brand."""
+
+    return f"{table_prefix()}{base}"
+
+
+class Row(dict):
+    """Dictionary row that also supports index based access."""
+
+    def __init__(self, columns: Sequence[str], values: Sequence[Any]) -> None:
+        super().__init__(zip(columns, values))
+        self._columns = list(columns)
+
+    def __getitem__(self, key: int | str) -> Any:  # type: ignore[override]
+        if isinstance(key, int):
+            key = self._columns[key]
+        return super().__getitem__(key)
+
+
+class CursorWrapper:
+    """Thin wrapper providing sqlite-like cursor helpers."""
+
+    def __init__(self, cursor: mysql.connector.cursor.MySQLCursor) -> None:
+        self._cursor = cursor
+        self._columns = [desc[0] for desc in cursor.description] if cursor.description else []
+
+    def fetchone(self) -> Row | None:
+        record = self._cursor.fetchone()
+        if record is None:
+            return None
+        return Row(self._columns, record)
+
+    def fetchall(self) -> list[Row]:
+        return [Row(self._columns, row) for row in self._cursor.fetchall()]
+
+    def __iter__(self) -> Iterator[Row]:
+        for row in self._cursor:
+            yield Row(self._columns, row)
+
+    @property
+    def lastrowid(self) -> int:
+        return self._cursor.lastrowid  # type: ignore[return-value]
+
+    @property
+    def columns(self) -> Sequence[str]:
+        return self._columns
+
+    def close(self) -> None:
+        self._cursor.close()
+
+
+class ConnectionWrapper:
+    """Context manager that emulates the subset of sqlite3 API we rely on."""
+
+    def __init__(self) -> None:
+        if not _current_database:
+            ensure_brand_mode()
+        if not _current_database:
+            raise RuntimeError("Database brand not initialised. Call set_brand_mode() first.")
+        self._conn = _get_pooled_connection()
+
+    def __enter__(self) -> "ConnectionWrapper":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        try:
+            if exc:
+                self._conn.rollback()
+            else:
+                self._conn.commit()
+        finally:
+            self._conn.close()
+
+    # Delegate helpers -------------------------------------------------
+    def commit(self) -> None:
+        self._conn.commit()
+
+    def rollback(self) -> None:
+        self._conn.rollback()
+
+    def close(self) -> None:
+        self._conn.close()
+
+    def cursor(self) -> mysql.connector.cursor.MySQLCursor:
+        return self._conn.cursor()
+
+    def execute(self, sql: str, params: Sequence[Any] | Mapping[str, Any] | None = None) -> CursorWrapper:
+        statement, bound = _convert_sql(sql, params)
+        cursor = self._conn.cursor(buffered=True)
+        cursor.execute(statement, bound)
+        wrapped = CursorWrapper(cursor)
+        return wrapped
+
+    def executemany(
+        self,
+        sql: str,
+        params_seq: Iterable[Sequence[Any] | Mapping[str, Any]],
+    ) -> None:
+        statement = _convert_sql_statement(sql)
+        cursor = self._conn.cursor(buffered=True)
+        cursor.executemany(statement, list(params_seq))
+        cursor.close()
+
+    def executescript(self, sql: str) -> None:
+        for statement in _split_sql_script(sql):
+            if statement:
+                self.execute(statement)
+
+
+_NAMED_PATTERN = re.compile(r":([a-zA-Z_][a-zA-Z0-9_]*)")
+
+
+def _convert_sql_statement(sql: str) -> str:
+    """Convert SQLite style placeholders to MySQL compatible ones."""
+
+    converted = sql.replace("?", "%s")
+
+    def repl(match: re.Match[str]) -> str:
+        return f"%({match.group(1)})s"
+
+    return _NAMED_PATTERN.sub(repl, converted)
+
+
+def _convert_sql(
+    sql: str,
+    params: Sequence[Any] | Mapping[str, Any] | None,
+) -> tuple[str, Sequence[Any] | Mapping[str, Any] | None]:
+    statement = _convert_sql_statement(sql)
+    if params is None:
+        return statement, None
+    return statement, params
+
+
+def _split_sql_script(sql: str) -> Iterator[str]:
+    """Split multi-statement scripts into individual commands."""
+
+    statement = []
+    in_string = False
+    quote_char = ""
+    for char in sql:
+        if char in {'"', "'"}:
+            if not in_string:
+                in_string = True
+                quote_char = char
+            elif quote_char == char:
+                in_string = False
+        if char == ";" and not in_string:
+            chunk = "".join(statement).strip()
+            if chunk:
+                yield chunk
+            statement = []
+        else:
+            statement.append(char)
+    tail = "".join(statement).strip()
+    if tail:
+        yield tail
+
+
+def get_connection() -> ConnectionWrapper:
+    """Return a wrapped MySQL connection."""
+
+    return ConnectionWrapper()
+
+
+def execute_script(sql: str) -> None:
+    """Execute a SQL script in a managed connection."""
+
+    with get_connection() as conn:
+        conn.executescript(sql)
+
+
+def iter_rows(query: str, params: Sequence[Any] | None = None) -> Iterable[Row]:
+    """Yield rows for a query lazily."""
+
+    with get_connection() as conn:
+        cursor = conn.execute(query, params)
+        for row in cursor:
+            yield row
+
+
+def transact(func) -> None:
+    """Execute callback inside a transaction with auto-commit/rollback."""
+
+    with get_connection() as conn:
+        try:
+            func(conn)
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+
+
+# CLI utilities rely on ``APP_BRAND`` to select a prefix automatically. The
+# first consumer that requests a connection will trigger ``ensure_brand_mode``.
