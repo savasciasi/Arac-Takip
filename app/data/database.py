@@ -19,6 +19,34 @@ except ModuleNotFoundError as exc:  # pragma: no cover - import guard
 from ..utils.runtime_paths import storage_root as runtime_storage_root
 
 
+def _load_env_file() -> None:
+    """Populate ``os.environ`` from a local ``.env`` if present."""
+
+    env_path = Path(__file__).resolve().parents[2] / ".env"
+    if not env_path.exists():
+        return
+    try:
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            key, sep, value = line.partition("=")
+            if not sep:
+                continue
+            key = key.strip()
+            # keep trailing spaces inside quotes but strip outside
+            value = value.strip().strip("\"'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+    except OSError:
+        # Reading a user-managed config should never crash the app; fall back to
+        # existing environment variables if the file is unreadable.
+        return
+
+
+_load_env_file()
+
+
 STORAGE_ROOT = runtime_storage_root()
 
 DB_HOST = os.getenv("DB_HOST", "localhost")
