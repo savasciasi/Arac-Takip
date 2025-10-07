@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import fields
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any, Iterable, List, Optional, Sequence, Type, TypeVar
 
 from ..data.database import current_database, get_connection, table_name
@@ -42,7 +43,16 @@ class Repository:
             return set()
 
     def _row_to_model(self, row: Any) -> T:
+        """Cast MySQL driver types to the dataclass-friendly equivalents."""
+
         data = dict(row)
+        for key, value in data.items():
+            if isinstance(value, datetime):
+                data[key] = value.isoformat(sep=" ", timespec="seconds")
+            elif isinstance(value, date):
+                data[key] = value.isoformat()
+            elif isinstance(value, Decimal):
+                data[key] = float(value)
         return self.model(**data)  # type: ignore[arg-type]
 
     def list(self, include_deleted: bool = False) -> List[T]:
