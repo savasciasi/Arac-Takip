@@ -20,6 +20,7 @@ datas = [
     ("app/storage", "storage"),
     ("app/i18n", "i18n"),
     ("app/config", "config"),
+    ("app/ui/qss", "ui/qss"),
     (".env", "."),
     *pyqt5_datas,
     *mysql_datas,

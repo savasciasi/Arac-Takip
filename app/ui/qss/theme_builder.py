@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from string import Template
 
-from ...utils.runtime_paths import state_file
+from ...utils.runtime_paths import package_path, state_file
 
 BASE_FONT_SIZE = 14
 
@@ -142,8 +142,15 @@ QScrollBar::handle:vertical {
 
 
 def _load_tokens() -> dict[str, dict[str, dict[str, object]]]:
-    token_path = Path(__file__).with_name("theme.tokens.json")
-    data = json.loads(token_path.read_text(encoding="utf-8"))
+    """Load theme tokens from the packaged data bundle."""
+
+    token_path = package_path("ui", "qss", "theme.tokens.json")
+    try:
+        data = json.loads(token_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(
+            "theme.tokens.json is missing from the packaged resources"
+        ) from exc
     return data.get("profiles", {})
 
 
@@ -182,7 +189,7 @@ def generate(profile: str, theme: str = "light", text_scale: float = 1.0, output
     }
 
     qss = TEMPLATE.substitute(mapping)
-    token_path = Path(__file__).with_name("theme.tokens.json")
+    token_path = package_path("ui", "qss", "theme.tokens.json")
     out_path = output or token_path.with_name("theme.qss")
     try:
         out_path.write_text(qss, encoding="utf-8")
