@@ -1,8 +1,15 @@
 """Application entry point for Fleet & Fine Management."""
 from __future__ import annotations
 
-import json
+try:  # Load .env without failing when the helper is missing
+    from dotenv import load_dotenv  # type: ignore import-not-found
+
+    load_dotenv()
+except Exception:
+    pass
+
 import logging
+import os
 import sys
 
 from pathlib import Path
@@ -37,7 +44,7 @@ from app.qt import (
 )
 
 from app.data import database, migrations, migrations_lite, seed
-from app.services.settings_service import CONFIG_PATH, SettingsService
+from app.services.settings_service import SettingsService
 from app.services.ui_service import UIService
 from app.ui.components.brand_selector import BrandSelectionDialog
 from app.ui.components.command_palette import CommandPalette
@@ -109,6 +116,7 @@ class MainWindow(QMainWindow):
         self._apply_text_scale(self.ui_service.text_scale)
         self._apply_theme(self.ui_service.theme, self.ui_service.profile)
         self._apply_brand_logo()
+        self._refresh_pages()
 
     def _register_pages(self) -> None:
         pages = [
@@ -224,6 +232,27 @@ class MainWindow(QMainWindow):
             stylesheet = "#CentralContainer { background-image: none; }"
         self.central_widget.setStyleSheet(stylesheet)
 
+    def _refresh_pages(self) -> None:
+        """Invoke refresh hooks on all pages when the brand context changes."""
+
+        for page in self._pages.values():
+            refresh = getattr(page, "refresh", None)
+            if callable(refresh):
+                refresh()
+
+    def update_brand(self, brand: str) -> None:
+        """Update UI branding and refresh page data for the new brand."""
+
+        normalised = brand.lower()
+        if normalised == self.brand_mode:
+            self._refresh_pages()
+            return
+        self.brand_mode = normalised
+        self.setWindowTitle(self._brand_display())
+        self.brand_label.setText(self._brand_display())
+        self._apply_brand_logo()
+        self._refresh_pages()
+
 
 def _show_fatal_dialog(error: Exception) -> None:
     """Display a user-friendly dialog when startup fails."""
@@ -260,21 +289,23 @@ def _run_application() -> int:
     """Initialise services, show the main window, and start the event loop."""
 
     logger = logging.getLogger(__name__)
+    settings = SettingsService()
+    language_default = settings.get("default_language", "tr")
+    theme_default = settings.get("default_theme", "light")
+    profile_default = settings.get("theme_profile", "minimal")
+    large_text_default = settings.get("large_text", "false").lower() == "true"
     app = QApplication(sys.argv)
     logger.info(
         "Starting Qt application (frozen=%s, python=%s)",
         getattr(sys, "frozen", False),
         sys.version.split()[0],
     )
-    defaults = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    large_text_default = str(defaults.get("large_text", "false")).lower() == "true"
     ui_service = UIService(
-        language=defaults.get("default_language", "tr"),
-        theme=defaults.get("default_theme", "light"),
-        profile=defaults.get("theme_profile", "minimal"),
+        language=language_default,
+        theme=theme_default,
+        profile=profile_default,
         large_text=large_text_default,
     )
-    # Apply baseline theme so the brand selector inherits the styling.
     app.setStyleSheet(
         theme_builder.generate(ui_service.profile, ui_service.theme, ui_service.text_scale)
     )
@@ -282,7 +313,8 @@ def _run_application() -> int:
     font.setPointSizeF(14 * ui_service.text_scale)
     app.setFont(font)
 
-    selector = BrandSelectionDialog(ui_service)
+    default_brand = os.getenv("APP_BRAND") or settings.get_active_brand("knk")
+    selector = BrandSelectionDialog(ui_service, default_brand=default_brand)
     if selector.exec_() != QDialog.Accepted or not selector.selection:
         logger.info("Brand selection cancelled by user")
         return 0
@@ -305,10 +337,11 @@ def _run_application() -> int:
     migrations_lite.run()
     logger.info("Seeding demo data if necessary")
     seed.run()
-    settings = SettingsService()
-    stored_language = settings.get("default_language", defaults.get("default_language", "tr"))
-    stored_theme = settings.get("default_theme", defaults.get("default_theme", "light"))
-    stored_profile = settings.get("theme_profile", defaults.get("theme_profile", "minimal"))
+    settings.load()
+    settings.set_active_brand(brand_mode)
+    stored_language = settings.get("default_language", language_default)
+    stored_theme = settings.get("default_theme", theme_default)
+    stored_profile = settings.get("theme_profile", profile_default)
     stored_large_text = settings.get("large_text", str(large_text_default)).lower() == "true"
     ui_service.set_language(stored_language)
     ui_service.set_text_scale(stored_large_text)

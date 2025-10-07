@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 try:
     import mysql.connector
-    from mysql.connector import errorcode
 except ModuleNotFoundError as exc:  # pragma: no cover - import guard
     raise RuntimeError(
         "MySQL sürücüsü bulunamadı. Lütfen `pip install mysql-connector-python` "
@@ -61,7 +60,6 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = int(os.getenv("DB_PORT", "3306"))
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-DB_NAME_TEMPLATE = os.getenv("DB_NAME_TEMPLATE", "aractakip_{brand}")
 DB_SHARED_NAME = os.getenv("DB_SHARED_NAME")
 
 _current_brand = ""
@@ -99,61 +97,6 @@ def storage_path(*parts: str, brand: str | None = None, ensure: bool = False) ->
     return path
 
 
-def _resolve_database_name(brand: str) -> str:
-    template = DB_NAME_TEMPLATE or "aractakip_{brand}"
-    if "{brand}" in template:
-        return template.format(brand=brand)
-    return template
-
-
-def _ensure_database_exists(name: str) -> None:
-    """Create the database if it does not already exist."""
-
-    admin = None
-    try:
-        admin = mysql.connector.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            charset="utf8mb4",
-            autocommit=True,
-        )
-        cursor = admin.cursor()
-        try:
-            cursor.execute(
-                f"CREATE DATABASE IF NOT EXISTS `{name}` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-            )
-        finally:
-            cursor.close()
-    except mysql.connector.Error as exc:
-        if exc.errno == errorcode.ER_DBACCESS_DENIED_ERROR:
-            # Shared hosting environments often disallow CREATE DATABASE. If the
-            # schema already exists the connection below will succeed and we can
-            # continue silently; otherwise we raise a clearer error for the user.
-            try:
-                probe = mysql.connector.connect(
-                    host=DB_HOST,
-                    port=DB_PORT,
-                    user=DB_USER,
-                    password=DB_PASSWORD,
-                    database=name,
-                    charset="utf8mb4",
-                )
-                probe.close()
-            except mysql.connector.Error as probe_exc:  # pragma: no cover - env specific
-                raise RuntimeError(
-                    "MySQL kullanıcı hesabının yeni veritabanı oluşturma yetkisi yok ve "
-                    f"'{name}' şeması bulunamadı. Lütfen phpMyAdmin üzerinden şemayı el ile oluşturun "
-                    "veya sistem yöneticinizden yetki isteyin."
-                ) from probe_exc
-        else:  # pragma: no cover - unexpected MySQL error
-            raise
-    finally:
-        if admin is not None:
-            admin.close()
-
-
 def _verify_database(name: str) -> None:
     """Ensure the provided database/schema is reachable by the user."""
 
@@ -178,31 +121,15 @@ def set_brand_mode(brand: str) -> str:
 
     global _current_brand, _current_database, _table_prefix
     _current_brand = _normalise_brand(brand)
-    logger.info("Switching to brand '%s'", _current_brand)
-    target_database = _resolve_database_name(_current_brand)
-    try:
-        _ensure_database_exists(target_database)
-        _verify_database(target_database)
-        _current_database = target_database
-        _table_prefix = ""
-        logger.info("Using dedicated schema '%s' for brand '%s'", target_database, _current_brand)
-    except RuntimeError as exc:
-        if not DB_SHARED_NAME:
-            logger.error(
-                "Failed to prepare schema '%s' for brand '%s'", target_database, _current_brand
-            )
-            raise RuntimeError(
-                "MySQL şeması oluşturulamadı. CREATE DATABASE yetkiniz yoksa mevcut şemanızı "
-                "DB_SHARED_NAME değişkeniyle belirtmeniz gerekir."
-            ) from exc
-        _verify_database(DB_SHARED_NAME)
-        _current_database = DB_SHARED_NAME
-        _table_prefix = f"{_current_brand}_"
-        logger.info(
-            "Falling back to shared schema '%s' with prefix '%s'",
-            DB_SHARED_NAME,
-            _table_prefix,
+    if not DB_SHARED_NAME:
+        raise RuntimeError(
+            "DB_SHARED_NAME tanımlı değil. Lütfen .env dosyanızda mevcut MySQL şemasını belirtin."
         )
+    logger.info("Switching to brand '%s' using shared schema '%s'", _current_brand, DB_SHARED_NAME)
+    _verify_database(DB_SHARED_NAME)
+    _current_database = DB_SHARED_NAME
+    _table_prefix = f"{_current_brand}_"
+    logger.info("Aktif tablo öneki '%s' olarak ayarlandı", _table_prefix)
     return _current_database
 
 

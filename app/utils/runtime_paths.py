@@ -16,17 +16,26 @@ def _package_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def _default_data_dir() -> Path:
+    """Return the per-user data directory used when no override is set."""
+
+    if sys.platform.startswith("win"):
+        base = Path(os.getenv("APPDATA", Path.home() / "AppData" / "Roaming"))
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    return base / APP_DIR_NAME
+
+
 def runtime_root() -> Path:
     """Return a writable directory used for mutable runtime data."""
 
-    if getattr(sys, "frozen", False) or hasattr(sys, "_MEIPASS"):
-        if sys.platform.startswith("win"):
-            base = Path(os.getenv("APPDATA", Path.home() / "AppData" / "Roaming"))
-        elif sys.platform == "darwin":
-            base = Path.home() / "Library" / "Application Support"
-        else:
-            base = Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share"))
-        target = base / APP_DIR_NAME
+    override = os.getenv("ARACTAKIP_DATA_DIR")
+    if override:
+        target = Path(override)
+    elif getattr(sys, "frozen", False) or hasattr(sys, "_MEIPASS"):
+        target = _default_data_dir()
     else:
         target = _package_root()
     target.mkdir(parents=True, exist_ok=True)

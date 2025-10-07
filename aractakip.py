@@ -1,17 +1,118 @@
-"""Legacy entry point preserved for compatibility.
+"""Application launcher that prepares the runtime environment."""
+from __future__ import annotations
 
-This module simply forwards execution to the new application bootstrapper
-located at ``app/main.py`` so that existing workflows that expect to run
-``python aractakip.py`` continue to work after the architecture overhaul.
-"""
+import json
+import os
+import sys
+import traceback
+from pathlib import Path
+from typing import Any
 
-from app.main import main
+
+DEFAULT_CONFIG: dict[str, Any] = {
+    "default_language": "tr",
+    "default_theme": "light",
+    "theme_profile": "minimal",
+    "large_text": "false",
+    "active_brand": "knk",
+}
+
+
+def _load_dotenv() -> None:
+    """Load environment variables from a local .env file if available."""
+
+    try:
+        from dotenv import load_dotenv  # type: ignore import-not-found
+    except Exception:
+        return
+    try:
+        load_dotenv()
+    except Exception:
+        # Dotenv loading should never block startup; ignore malformed files.
+        pass
+
+
+def _user_data_dir() -> Path:
+    """Determine the writable per-user data directory."""
+
+    if sys.platform.startswith("win"):
+        base = Path(os.getenv("APPDATA", Path.home() / "AppData" / "Roaming"))
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    return base / "AracTakip"
+
+
+def _prepare_runtime_dirs() -> Path:
+    """Create runtime directories and seed the default config file."""
+
+    data_dir = Path(os.environ.get("ARACTAKIP_DATA_DIR", _user_data_dir()))
+    storage_dir = data_dir / "storage"
+    logs_dir = data_dir / "logs"
+    storage_dir.mkdir(parents=True, exist_ok=True)
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    config_path = storage_dir / "config.json"
+    if not config_path.exists():
+        config_path.write_text(
+            json.dumps(DEFAULT_CONFIG, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+    os.environ["ARACTAKIP_DATA_DIR"] = str(data_dir)
+    return data_dir
+
+
+def _log_fatal(data_dir: Path, error: BaseException) -> Path:
+    """Append a fatal error entry to the log file and return its path."""
+
+    logs_dir = data_dir / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    log_path = logs_dir / "fatal.log"
+    trace = traceback.format_exc()
+    with log_path.open("a", encoding="utf-8") as handle:
+        handle.write("\n=== Fatal error ===\n")
+        handle.write(trace)
+    return log_path
+
+
+def _show_windows_dialog(message: str, title: str = "AracTakip") -> None:
+    """Display a message box on Windows without failing elsewhere."""
+
+    if not sys.platform.startswith("win"):
+        return
+    try:
+        import ctypes
+
+        ctypes.windll.user32.MessageBoxW(  # type: ignore[attr-defined]
+            None,
+            message,
+            title,
+            0x10,  # MB_ICONERROR
+        )
+    except Exception:
+        # Never let dialog failures prevent the traceback from propagating.
+        pass
 
 
 def run() -> None:
-    """Launch the application via the shared ``main`` function."""
+    """Entrypoint invoked by both console and packaged builds."""
 
-    main()
+    _load_dotenv()
+    data_dir = _prepare_runtime_dirs()
+    try:
+        from app.main import main
+
+        main()
+    except Exception as exc:  # pragma: no cover - runtime guard
+        log_path = _log_fatal(data_dir, exc)
+        _show_windows_dialog(
+            (
+                "Uygulama kritik bir hatayla kapandı.\n"
+                "The application encountered a fatal error.\n\n"
+                f"Detaylar log dosyasında: {log_path}"
+            )
+        )
+        raise
 
 
 if __name__ == "__main__":

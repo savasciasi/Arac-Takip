@@ -26,10 +26,17 @@ BRANDING_DIR = Path(__file__).resolve().parents[2] / "assets" / "branding"
 class BrandSelectionDialog(QDialog):
     """Simple dialog with two branded options used at startup."""
 
-    def __init__(self, ui_service: UIService, parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        ui_service: UIService,
+        default_brand: Optional[str] = None,
+        parent: Optional[QWidget] = None,
+    ) -> None:
         super().__init__(parent)
         self.ui_service = ui_service
         self.selection: str | None = None
+        self._default_brand = (default_brand or "").lower()
+        self._buttons: dict[str, QPushButton] = {}
         self.setWindowTitle(self.ui_service.t("app.brand.select"))
         self.setModal(True)
         self.setMinimumWidth(360)
@@ -43,7 +50,9 @@ class BrandSelectionDialog(QDialog):
         layout.addLayout(button_row)
         button_row.addStretch(1)
         for key in ("knk", "nkk"):
-            button_row.addWidget(self._build_option(key))
+            button = self._build_option(key)
+            self._buttons[key] = button
+            button_row.addWidget(button)
         button_row.addStretch(1)
 
         layout.addItem(QSpacerItem(0, 12, QSizePolicy.Minimum, QSizePolicy.Expanding))
@@ -53,6 +62,8 @@ class BrandSelectionDialog(QDialog):
         if cancel:
             cancel.setText(self.ui_service.t("ui.dialog.cancel"))
         layout.addWidget(buttons)
+        if self._default_brand:
+            self.apply_default(self._default_brand)
 
     def _build_option(self, key: str) -> QPushButton:
         """Create an option button for the provided branding key."""
@@ -74,6 +85,18 @@ class BrandSelectionDialog(QDialog):
 
         self.selection = key
         self.accept()
+
+    def apply_default(self, brand: str) -> None:
+        """Highlight the provided brand button for quicker confirmation."""
+
+        target = brand.lower()
+        for key, button in self._buttons.items():
+            variant = "primary" if key == target else "secondary"
+            button.setProperty("variant", variant)
+            button.style().unpolish(button)
+            button.style().polish(button)
+            if key == target:
+                button.setFocus(Qt.TabFocusReason)
 
 
 __all__ = ["BrandSelectionDialog"]
