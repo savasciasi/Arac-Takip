@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 import traceback
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -69,8 +71,10 @@ def _log_fatal(data_dir: Path, error: BaseException) -> Path:
     logs_dir.mkdir(parents=True, exist_ok=True)
     log_path = logs_dir / "fatal.log"
     trace = traceback.format_exc()
+    timestamp = datetime.utcnow().isoformat(timespec="seconds")
     with log_path.open("a", encoding="utf-8") as handle:
         handle.write("\n=== Fatal error ===\n")
+        handle.write(f"[{timestamp} UTC] {type(error).__name__}: {error}\n")
         handle.write(trace)
     return log_path
 
@@ -99,12 +103,26 @@ def run() -> None:
 
     _load_dotenv()
     data_dir = _prepare_runtime_dirs()
+    logger = logging.getLogger("aractakip.launcher")
+    try:
+        from app.utils.logging_utils import configure_logging
+
+        configure_logging()
+        logger.info("Launcher initialised (data_dir=%s)", data_dir)
+    except Exception:  # pragma: no cover - logging bootstrap failures
+        # Logging is a best-effort feature for the launcher. Failures here
+        # should not prevent the UI from attempting to start.
+        pass
     try:
         from app.main import main
 
         main()
     except Exception as exc:  # pragma: no cover - runtime guard
         log_path = _log_fatal(data_dir, exc)
+        try:
+            logger.exception("Fatal error during launch")
+        except Exception:
+            pass
         _show_windows_dialog(
             (
                 "Uygulama kritik bir hatayla kapandı.\n"

@@ -5,3 +5,4 @@ PyQt5==5.15.10
 reportlab==4.0.7
 Pillow==10.4.0
 mysql-connector-python==8.1.0
+python-dotenv==1.0.1

@@ -11,9 +11,7 @@ except Exception:
 import logging
 import os
 import sys
-
 from pathlib import Path
-
 
 if __package__ in (None, ""):
     # When the application is executed as ``python app/main.py`` or when the
@@ -62,8 +60,9 @@ from app.ui.pages.settings import SettingsPage
 from app.ui.pages.vehicles import VehiclesPage
 from app.ui.pages.logs import LogsPage
 from app.utils.logging_utils import configure_logging, current_log_file
+from app.utils.runtime_paths import package_path
 
-ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
+ASSETS_DIR = package_path("assets")
 ICON_DIR = ASSETS_DIR / "icons"
 BRANDING_DIR = ASSETS_DIR / "branding"
 
@@ -223,7 +222,7 @@ class MainWindow(QMainWindow):
         if logo_path.exists():
             stylesheet = (
                 "#CentralContainer {"
-                f" background-image: url({logo_path.as_posix()});"
+                f" background-image: url(\"{logo_path.as_posix()}\");"
                 " background-repeat: no-repeat;"
                 " background-position: center bottom;"
                 "}"

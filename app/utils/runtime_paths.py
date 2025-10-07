@@ -34,10 +34,8 @@ def runtime_root() -> Path:
     override = os.getenv("ARACTAKIP_DATA_DIR")
     if override:
         target = Path(override)
-    elif getattr(sys, "frozen", False) or hasattr(sys, "_MEIPASS"):
-        target = _default_data_dir()
     else:
-        target = _package_root()
+        target = _default_data_dir()
     target.mkdir(parents=True, exist_ok=True)
     return target
 
