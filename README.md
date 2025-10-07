@@ -72,7 +72,13 @@ APP_BRAND=nkk python -m app.data.seed
 python -m app.main
 ```
 
-Uygulama açılırken KNK veya NKK markasını seçmeniz istenir. Seçime göre aktif MySQL veritabanına bağlanılır ve dosya yüklemeleri `app/storage/<marka>/` altında saklanır. Arka plan logosu da aynı seçime göre otomatik güncellenir. Logo dosyaları `app/assets/branding/` klasöründe bulunduğundan, kendi logolarınız ile kolayca değiştirebilirsiniz.
+Uygulama açılırken KNK veya NKK markasını seçmeniz istenir. Seçime göre aktif MySQL veritabanına bağlanılır ve dosya yüklemeleri geliştirme ortamında `app/storage/<marka>/`, PyInstaller ile paketlenmiş sürümlerde ise işletim sistemine göre aşağıdaki dizin altında saklanır:
+
+- Windows: `%APPDATA%/AracTakip/storage/<marka>/`
+- macOS: `~/Library/Application Support/AracTakip/storage/<marka>/`
+- Linux: `$XDG_DATA_HOME/AracTakip/storage/<marka>/` (tanımlı değilse `~/.local/share/AracTakip/storage/<marka>/`)
+
+Arka plan logosu da aynı seçime göre otomatik güncellenir. Logo dosyaları `app/assets/branding/` klasöründe bulunduğundan, kendi logolarınız ile kolayca değiştirebilirsiniz.
 
 ## Paketleme
 
@@ -86,8 +92,10 @@ Oluşan `dist/AracTakip` klasörü çalıştırılabilir uygulamayı içerir.
 
 ## Yedekleme / Geri Yükleme
 
-- **Yedekleme:** Ayarlar sayfasından “Yedek Oluştur” butonu ile aktif markaya özel `backups/<marka>/backup_YYYYMMDD_HHMM.zip` arşivi oluşturulur. Arşivde `database.sql` MySQL dökümü ve `storage/<marka>/` klasörü yer alır.
+- **Yedekleme:** Ayarlar sayfasından “Yedek Oluştur” butonu ile aktif markaya özel `backups/<marka>/backup_YYYYMMDD_HHMM.zip` arşivi oluşturulur. Paketlenmiş sürümlerde bu dizin yukarıdaki çalışma dizini içinde yer alır. Arşivde `database.sql` MySQL dökümü ve `storage/<marka>/` klasörü yer alır.
 - **Geri Yükleme:** Aynı sayfada “Yedekten Geri Yükle” butonu son alınan yedeği doğrulayarak SQL dökümünü uygular ve işlem öncesinde otomatik `pre_restore_*.zip` dosyası üretir.
+
+Oluşturulan CSV/PDF dışa aktarımlar da aynı çalışma dizini altında `exports/` klasörüne kaydedilir.
 
 ## Özellikler
 

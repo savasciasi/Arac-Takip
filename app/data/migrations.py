@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
-
 from .database import current_database, execute_script, get_connection, table_name, table_prefix
+from ..utils.runtime_paths import state_file
 
-MIGRATIONS_LOG = Path(__file__).with_name(".migrations")
+MIGRATIONS_LOG = state_file("migrations.log")
 
 
 def _schema_sql() -> str:

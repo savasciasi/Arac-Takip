@@ -16,9 +16,10 @@ except ModuleNotFoundError as exc:  # pragma: no cover - import guard
         "gerekmiyor."
     ) from exc
 
+from ..utils.runtime_paths import storage_root as runtime_storage_root
 
-STORAGE_ROOT = Path(__file__).resolve().parents[1] / "storage"
-STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
+
+STORAGE_ROOT = runtime_storage_root()
 
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = int(os.getenv("DB_PORT", "3306"))

@@ -1,8 +1,6 @@
 """Reports page for generating simple exports."""
 from __future__ import annotations
 
-from pathlib import Path
-
 from ...qt import (
     QFrame,
     QGridLayout,
@@ -20,6 +18,7 @@ from ...repo.vehicles_repo import VehicleRepository
 from ...repo.drivers_repo import DriverRepository
 from ...services.exporter import Exporter
 from ...services.ui_service import UIService
+from ...utils.runtime_paths import exports_root
 from .base_page import BasePage
 
 
@@ -33,6 +32,7 @@ class ReportsPage(BasePage):
         self.drivers = DriverRepository()
         self.assignments = AssignmentRepository()
         self.exporter = Exporter()
+        self.export_dir = exports_root()
         layout = QVBoxLayout(self)
         self.header = QLabel()
         self.header.setProperty("role", "page-title")
@@ -53,7 +53,7 @@ class ReportsPage(BasePage):
 
     def export_fines_csv(self) -> None:
         headers, rows = self._fines_dataset()
-        path = self.exporter.export_csv(headers, rows, Path("exports/fines_report.csv"))
+        path = self.exporter.export_csv(headers, rows, self.export_dir / "fines_report.csv")
         self._notify_success(path)
 
     def export_fines_pdf(self) -> None:
@@ -62,13 +62,13 @@ class ReportsPage(BasePage):
             self.ui_service.t("reports.fines.title"),
             headers,
             rows,
-            Path("exports/fines_report.pdf"),
+            self.export_dir / "fines_report.pdf",
         )
         self._notify_success(path)
 
     def export_vehicles_csv(self) -> None:
         headers, rows = self._vehicles_dataset()
-        path = self.exporter.export_csv(headers, rows, Path("exports/vehicles_report.csv"))
+        path = self.exporter.export_csv(headers, rows, self.export_dir / "vehicles_report.csv")
         self._notify_success(path)
 
     def export_vehicles_pdf(self) -> None:
@@ -77,13 +77,13 @@ class ReportsPage(BasePage):
             self.ui_service.t("reports.vehicles.title"),
             headers,
             rows,
-            Path("exports/vehicles_report.pdf"),
+            self.export_dir / "vehicles_report.pdf",
         )
         self._notify_success(path)
 
     def export_drivers_csv(self) -> None:
         headers, rows = self._drivers_dataset()
-        path = self.exporter.export_csv(headers, rows, Path("exports/drivers_report.csv"))
+        path = self.exporter.export_csv(headers, rows, self.export_dir / "drivers_report.csv")
         self._notify_success(path)
 
     def export_drivers_pdf(self) -> None:
@@ -92,7 +92,7 @@ class ReportsPage(BasePage):
             self.ui_service.t("reports.drivers.title"),
             headers,
             rows,
-            Path("exports/drivers_report.pdf"),
+            self.export_dir / "drivers_report.pdf",
         )
         self._notify_success(path)
 

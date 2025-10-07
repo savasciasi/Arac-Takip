@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Dict
 
 from ..models.app_settings import AppSetting
 from ..repo.settings_repo import SettingsRepository
+from ..utils.runtime_paths import config_path
 
-CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "settings.json"
+CONFIG_PATH = config_path("settings.json")
 
 
 class SettingsService:

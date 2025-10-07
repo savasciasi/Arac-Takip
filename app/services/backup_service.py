@@ -8,10 +8,9 @@ from decimal import Decimal
 from pathlib import Path
 
 from ..data.database import current_brand, current_database, execute_script, get_connection, storage_root
+from ..utils.runtime_paths import backups_root
 
-BASE_DIR = Path(__file__).resolve().parents[1]
-BACKUP_ROOT = BASE_DIR / "backups"
-BACKUP_ROOT.mkdir(exist_ok=True)
+BACKUP_ROOT = backups_root()
 
 
 def brand_backup_dir() -> Path:

@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from string import Template
 
+from ...utils.runtime_paths import state_file
+
 BASE_FONT_SIZE = 14
 
 TEMPLATE = Template(
@@ -182,7 +184,12 @@ def generate(profile: str, theme: str = "light", text_scale: float = 1.0, output
     qss = TEMPLATE.substitute(mapping)
     token_path = Path(__file__).with_name("theme.tokens.json")
     out_path = output or token_path.with_name("theme.qss")
-    out_path.write_text(qss, encoding="utf-8")
+    try:
+        out_path.write_text(qss, encoding="utf-8")
+    except OSError:
+        fallback = state_file("theme.qss")
+        fallback.write_text(qss, encoding="utf-8")
+        out_path = fallback
     return qss
 
 

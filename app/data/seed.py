@@ -3,9 +3,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from pathlib import Path
-
-from .database import current_brand, get_connection, table_name
+from .database import get_connection, storage_path, table_name
 
 
 VEHICLES = [
@@ -24,7 +22,7 @@ FINES = [
 ]
 
 def _doc_path(name: str) -> str:
-    return str(Path("storage") / current_brand() / name)
+    return str(storage_path(name, ensure=True))
 
 
 DOCUMENTS = [
