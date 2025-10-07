@@ -90,6 +90,13 @@ pyinstaller --noconfirm --name AracTakip --windowed app/main.py
 
 Oluşan `dist/AracTakip` klasörü çalıştırılabilir uygulamayı içerir.
 
+## Günlükler
+
+ - Geliştirme ortamında uygulama `app/logs/` klasörüne `launcher.log` ve marka bazlı `knk_app.log` / `nkk_app.log` dosyalarını üretir.
+- Kenar çubuğundaki **Günlükler / Protokolle** sayfası mevcut log dosyalarını listeler, içeriğini uygulama içinden görüntülemenizi ve klasörü tek tıkla açmanızı sağlar.
+- PyInstaller ile alınan hatalar bu dosyaya kaydedilir; uygulama kritik bir sorunla kapanırsa hata mesajında log dosyasının tam yolu da gösterilir.
+- Paketlenmiş sürümlerde log dizini işletim sistemine göre `AppData/AracTakip/logs/` (Windows), `~/Library/Application Support/AracTakip/logs/` (macOS) veya `$XDG_DATA_HOME/AracTakip/logs/` (Linux) altında bulunur.
+
 ## Yedekleme / Geri Yükleme
 
 - **Yedekleme:** Ayarlar sayfasından “Yedek Oluştur” butonu ile aktif markaya özel `backups/<marka>/backup_YYYYMMDD_HHMM.zip` arşivi oluşturulur. Paketlenmiş sürümlerde bu dizin yukarıdaki çalışma dizini içinde yer alır. Arşivde `database.sql` MySQL dökümü ve `storage/<marka>/` klasörü yer alır.

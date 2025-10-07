@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
 
 from pathlib import Path
@@ -25,6 +26,7 @@ from app.qt import (
     QLabel,
     QMainWindow,
     QFont,
+    QMessageBox,
     QPushButton,
     QSize,
     QSizePolicy,
@@ -51,6 +53,8 @@ from app.ui.pages.recycle_bin import RecycleBinPage
 from app.ui.pages.reports import ReportsPage
 from app.ui.pages.settings import SettingsPage
 from app.ui.pages.vehicles import VehiclesPage
+from app.ui.pages.logs import LogsPage
+from app.utils.logging_utils import configure_logging, current_log_file
 
 ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 ICON_DIR = ASSETS_DIR / "icons"
@@ -117,6 +121,7 @@ class MainWindow(QMainWindow):
             ("assignments", AssignmentsPage(self.ui_service), "assignments", "primary"),
             ("maintenance", MaintenanceLitePage(self.ui_service), "maintenance", "primary"),
             ("recycle", RecycleBinPage(self.ui_service), "recycle", "secondary"),
+            ("logs", LogsPage(self.ui_service), "logs", "secondary"),
             ("settings", SettingsPage(self.ui_service, self.settings_service), "settings", "secondary"),
         ]
         bottom: list[QPushButton] = []
@@ -158,6 +163,7 @@ class MainWindow(QMainWindow):
                 (self.ui_service.t("ui.nav.assignments"), "", lambda: self._navigate("assignments")),
                 (self.ui_service.t("ui.nav.maintenance"), "", lambda: self._navigate("maintenance")),
                 (self.ui_service.t("ui.nav.recycle"), "", lambda: self._navigate("recycle")),
+                (self.ui_service.t("ui.nav.logs"), "", lambda: self._navigate("logs")),
                 (self.ui_service.t("ui.nav.settings"), "", lambda: self._navigate("settings")),
             ]
         )
@@ -219,8 +225,47 @@ class MainWindow(QMainWindow):
         self.central_widget.setStyleSheet(stylesheet)
 
 
-def main() -> None:
+def _show_fatal_dialog(error: Exception) -> None:
+    """Display a user-friendly dialog when startup fails."""
+
+    details = f"{error}"
+    log_path = current_log_file()
+    message = (
+        "Uygulama kritik bir hatayla kapandı.\n"
+        "The application encountered a fatal error.\n\n"
+        f"Hata / Fehler: {details}\n"
+        f"Log dosyası / Protokoll: {log_path}"
+    )
+    created_app = False
+    app = QApplication.instance()
+    try:
+        if app is None:
+            app = QApplication(sys.argv)
+            created_app = True
+        QMessageBox.critical(
+            None,
+            "Uygulama Hatası / Anwendungsfehler",
+            message,
+        )
+    except Exception:
+        # If we cannot display the dialog (e.g. missing Qt plugins) we silently
+        # ignore the error because the log file already contains the details.
+        return
+    finally:
+        if created_app and app is not None:
+            app.quit()
+
+
+def _run_application() -> int:
+    """Initialise services, show the main window, and start the event loop."""
+
+    logger = logging.getLogger(__name__)
     app = QApplication(sys.argv)
+    logger.info(
+        "Starting Qt application (frozen=%s, python=%s)",
+        getattr(sys, "frozen", False),
+        sys.version.split()[0],
+    )
     defaults = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     large_text_default = str(defaults.get("large_text", "false")).lower() == "true"
     ui_service = UIService(
@@ -239,15 +284,26 @@ def main() -> None:
 
     selector = BrandSelectionDialog(ui_service)
     if selector.exec_() != QDialog.Accepted or not selector.selection:
-        sys.exit(0)
+        logger.info("Brand selection cancelled by user")
+        return 0
     brand_mode = selector.selection
 
+    configure_logging(brand_mode)
+    logger.info("Brand selected: %s", brand_mode)
     database.set_brand_mode(brand_mode)
+    logger.info(
+        "Connected to database '%s' with prefix '%s'",
+        database.current_database(),
+        database.table_prefix(),
+    )
     # Ensure the required schema objects exist before services query them. The
     # migrations are idempotent so calling them on each launch keeps both KNK
     # and NKK environments aligned without manual intervention.
+    logger.info("Running core migrations")
     migrations.run()
+    logger.info("Running lite migrations")
     migrations_lite.run()
+    logger.info("Seeding demo data if necessary")
     seed.run()
     settings = SettingsService()
     stored_language = settings.get("default_language", defaults.get("default_language", "tr"))
@@ -265,7 +321,25 @@ def main() -> None:
     window = MainWindow(ui_service, settings, brand_mode)
     window.resize(1280, 720)
     window.show()
-    sys.exit(app.exec_())
+    logger.info("Main window displayed, entering event loop")
+    exit_code = app.exec_()
+    logger.info("Event loop finished with exit code %s", exit_code)
+    return exit_code
+
+
+def main() -> None:
+    """Configure logging, run the application, and handle fatal errors."""
+
+    configure_logging()
+    logger = logging.getLogger(__name__)
+    try:
+        exit_code = _run_application()
+    except Exception as exc:  # pragma: no cover - UI level error handling
+        logger.exception("Fatal error during application startup")
+        _show_fatal_dialog(exc)
+        sys.exit(1)
+    else:
+        sys.exit(exit_code)
 
 
 if __name__ == "__main__":

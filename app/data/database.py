@@ -1,10 +1,14 @@
 """MySQL connection helpers compatible with the original SQLite API."""
 from __future__ import annotations
 
+import logging
 import os
 import re
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping, Sequence
+
+logger = logging.getLogger(__name__)
+
 
 try:
     import mysql.connector
@@ -26,6 +30,7 @@ def _load_env_file() -> None:
     if not env_path.exists():
         return
     try:
+        loaded_keys: list[str] = []
         for raw_line in env_path.read_text(encoding="utf-8").splitlines():
             line = raw_line.strip()
             if not line or line.startswith("#"):
@@ -38,6 +43,9 @@ def _load_env_file() -> None:
             value = value.strip().strip("\"'")
             if key and key not in os.environ:
                 os.environ[key] = value
+                loaded_keys.append(key)
+        if loaded_keys:
+            logger.info("Loaded %s from .env", ", ".join(sorted(loaded_keys)))
     except OSError:
         # Reading a user-managed config should never crash the app; fall back to
         # existing environment variables if the file is unreadable.
@@ -170,14 +178,19 @@ def set_brand_mode(brand: str) -> str:
 
     global _current_brand, _current_database, _table_prefix
     _current_brand = _normalise_brand(brand)
+    logger.info("Switching to brand '%s'", _current_brand)
     target_database = _resolve_database_name(_current_brand)
     try:
         _ensure_database_exists(target_database)
         _verify_database(target_database)
         _current_database = target_database
         _table_prefix = ""
+        logger.info("Using dedicated schema '%s' for brand '%s'", target_database, _current_brand)
     except RuntimeError as exc:
         if not DB_SHARED_NAME:
+            logger.error(
+                "Failed to prepare schema '%s' for brand '%s'", target_database, _current_brand
+            )
             raise RuntimeError(
                 "MySQL şeması oluşturulamadı. CREATE DATABASE yetkiniz yoksa mevcut şemanızı "
                 "DB_SHARED_NAME değişkeniyle belirtmeniz gerekir."
@@ -185,6 +198,11 @@ def set_brand_mode(brand: str) -> str:
         _verify_database(DB_SHARED_NAME)
         _current_database = DB_SHARED_NAME
         _table_prefix = f"{_current_brand}_"
+        logger.info(
+            "Falling back to shared schema '%s' with prefix '%s'",
+            DB_SHARED_NAME,
+            _table_prefix,
+        )
     return _current_database
 
 
