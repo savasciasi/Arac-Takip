@@ -5,8 +5,8 @@ from PyInstaller.utils.hooks import collect_all, collect_submodules
 block_cipher = None
 
 pyqt5_datas, pyqt5_binaries, pyqt5_hiddenimports = collect_all("PyQt5")
-mysql_hiddenimports = collect_submodules("mysql")
-mysql_connector_hiddenimports = collect_submodules("mysql.connector")
+mysql_datas, mysql_binaries, mysql_hiddenimports = collect_all("mysql")
+mysql_connector_datas, mysql_connector_binaries, mysql_connector_hiddenimports = collect_all("mysql.connector")
 
 hiddenimports = [
     "dotenv",
@@ -20,11 +20,16 @@ datas = [
     ("app/storage", "storage"),
     ("app/i18n", "i18n"),
     ("app/config", "config"),
+    (".env", "."),
     *pyqt5_datas,
+    *mysql_datas,
+    *mysql_connector_datas,
 ]
 
 binaries = [
     *pyqt5_binaries,
+    *mysql_binaries,
+    *mysql_connector_binaries,
 ]
 
 a = Analysis(

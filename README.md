@@ -34,25 +34,22 @@ olarak `mysqlclient` kurmanıza gerek yoktur.
 
 ## Veritabanı Kurulumu
 
-Tüm veriler MySQL üzerinde tutulur ve phpMyAdmin ile yönetilebilir. `.env` dosyanızı aşağıdaki değişkenlerle güncelleyin (örnek değerler `app/.env.example` içinde yer alır):
+Tüm veriler MySQL üzerinde tutulur ve phpMyAdmin ile yönetilebilir. `.env`
+dosyanızı aşağıdaki değişkenlerle güncelleyin (örnek değerler `.env.example`
+içinde yer alır ve paketlenen sürümlere otomatik olarak kopyalanır):
 
 ```
-DB_HOST=localhost
+DB_HOST=w01df556.kasserver.com
 DB_PORT=3306
 DB_USER=d03ce6af
 DB_PASSWORD=214151Kka
-DB_NAME_TEMPLATE=d03ce6af_{brand}
-# Paylaşımlı host kullanıyorsanız ve yeni veritabanı açma yetkiniz yoksa mevcut
-# şemayı buraya yazın. Uygulama tabloları `knk_`/`nkk_` ön ekiyle aynı şema içinde
-# oluşturur.
-# DB_SHARED_NAME=d03ce6af
+DB_SHARED_NAME=d03ce6af   # tek şema, tablolar knk_/nkk_ ön ekiyle oluşturulur
+APP_BRAND=knk             # varsayılan açılış markası
 ```
 
-Şema adı şablonundaki `{brand}` yer tutucusu KNK ve NKK markaları için otomatik olarak değiştirilir. MySQL kullanıcınız `CREATE DATABASE` yetkisine sahipse `d03ce6af_knk` ve `d03ce6af_nkk` şemaları otomatik oluşturulur. Eğer phpMyAdmin
-`#1044 - Access denied for user ... to database ...` hatası veriyorsa iki seçenek vardır:
+Şu anki kurulum tek bir MySQL şemasını (`DB_SHARED_NAME`) kullanır ve tüm tabloları marka ön eki (`knk_`, `nkk_`) ile ayırır. Paylaşımlı hostlarda yeni veritabanı oluşturma yetkisi gerekmediğinden phpMyAdmin'de yalnızca ilgili şemayı seçmek yeterlidir. Eğer mevcut kullanıcı bu şemaya erişemiyorsa bağlantı aşamasında "Access denied" hatası alırsınız; aynı kullanıcıyla phpMyAdmin'den giriş yapıp şemayı seçebildiğinizden emin olun.
 
-1. Sunucu yöneticinizden her marka için ayrı şema açmasını isteyin.
-2. `DB_SHARED_NAME` değişkenini mevcut şemanıza (ör. `d03ce6af`) ayarlayın ve `app/integrations/phpmyadmin_schema.sql` dosyasındaki `CREATE DATABASE/USE` satırlarını kaldırıp tek şema içinde `knk_` ve `nkk_` ön ekli tabloları oluşturun.
+Paylaşımlı şema üzerinde çalışıyorsanız `app/integrations/phpmyadmin_schema.sql` dosyasındaki betiği seçili veritabanına içe aktararak KNK/NKK tablolarını oluşturabilirsiniz (script içerisinde `CREATE DATABASE` komutu yoktur).
 
 Migration ve seed komutları her iki marka için de aynı şekilde çalışır:
 
@@ -82,13 +79,18 @@ Arka plan logosu da aynı seçime göre otomatik güncellenir. Logo dosyaları `
 
 ## Paketleme
 
-PyInstaller kullanarak Windows 64-bit için paketleme:
+Projeyle birlikte gelen `AracTakip.spec` dosyası gerekli tüm veri dosyalarını,
+ikonları, PyQt5 eklentilerini, MySQL bağlayıcısını ve `.env` yapılandırmasını
+pakete dahil eder. Tek komutla üretim paketini alabilirsiniz:
 
 ```bash
-pyinstaller --noconfirm --name AracTakip --windowed app/main.py
+pyinstaller AracTakip.spec
 ```
 
-Oluşan `dist/AracTakip` klasörü çalıştırılabilir uygulamayı içerir.
+Komut tamamlandığında `dist/AracTakip/AracTakip.exe` dosyası oluşur. `.env`
+dosyası ve JSON konfigürasyonları paketin içinde yer aldığı için ayrıca kopya
+çıkarmaya gerek yoktur. Uygulama açılışında hata oluşursa Windows MessageBox ve
+`logs/fatal.log` içinde ayrıntıları görebilirsiniz.
 
 ## Günlükler
 

@@ -65,6 +65,7 @@ DB_SHARED_NAME = os.getenv("DB_SHARED_NAME")
 _current_brand = ""
 _current_database = ""
 _table_prefix = ""
+_brand_bootstrap_attempted = False
 
 
 def _normalise_brand(brand: str) -> str:
@@ -116,6 +117,31 @@ def _verify_database(name: str) -> None:
         ) from exc
 
 
+def _default_brand() -> str:
+    """Return the brand used when no explicit value was provided."""
+
+    return os.getenv("APP_BRAND", "knk")
+
+
+def ensure_brand_mode(default: str | None = None) -> None:
+    """Initialise the database prefix the first time it is requested."""
+
+    global _brand_bootstrap_attempted
+    if _current_database:
+        return
+    if _brand_bootstrap_attempted:
+        # A previous attempt failed; avoid infinite recursion and let callers
+        # deal with the absence of a configured database.
+        return
+    _brand_bootstrap_attempted = True
+    brand = default or _default_brand()
+    try:
+        set_brand_mode(brand)
+    except Exception:
+        _brand_bootstrap_attempted = False
+        raise
+
+
 def set_brand_mode(brand: str) -> str:
     """Switch database/storage roots to the provided brand."""
 
@@ -130,31 +156,42 @@ def set_brand_mode(brand: str) -> str:
     _current_database = DB_SHARED_NAME
     _table_prefix = f"{_current_brand}_"
     logger.info("Aktif tablo öneki '%s' olarak ayarlandı", _table_prefix)
+    global _brand_bootstrap_attempted
+    _brand_bootstrap_attempted = True
     return _current_database
 
 
 def current_brand() -> str:
     """Expose the active brand code for other modules."""
 
+    if not _current_brand:
+        try:
+            ensure_brand_mode()
+        except Exception:
+            return _current_brand
     return _current_brand
 
 
 def current_database() -> str:
     """Return the active MySQL schema name."""
 
+    if not _current_database:
+        ensure_brand_mode()
     return _current_database
 
 
 def table_prefix() -> str:
     """Expose the active table prefix (empty when dedicated schemas are used)."""
 
+    if not _table_prefix:
+        ensure_brand_mode()
     return _table_prefix
 
 
 def table_name(base: str) -> str:
     """Return the fully qualified table name for the active brand."""
 
-    return f"{_table_prefix}{base}"
+    return f"{table_prefix()}{base}"
 
 
 class Row(dict):
@@ -206,6 +243,8 @@ class ConnectionWrapper:
     """Context manager that emulates the subset of sqlite3 API we rely on."""
 
     def __init__(self) -> None:
+        if not _current_database:
+            ensure_brand_mode()
         if not _current_database:
             raise RuntimeError("Database brand not initialised. Call set_brand_mode() first.")
         self._conn = mysql.connector.connect(
@@ -349,5 +388,5 @@ def transact(func) -> None:
             raise
 
 
-# Initialise using environment variable so CLI scripts can target a brand.
-set_brand_mode(os.getenv("APP_BRAND", "knk"))
+# CLI utilities rely on ``APP_BRAND`` to select a prefix automatically. The
+# first consumer that requests a connection will trigger ``ensure_brand_mode``.
