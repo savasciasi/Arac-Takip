@@ -1,0 +1,9 @@
+{
+  "command_palette": true,
+  "recycle_bin": true,
+  "maintenance_lite": true,
+  "assignments": true,
+  "backup": true,
+  "export_csv": true,
+  "export_pdf": true
+}
