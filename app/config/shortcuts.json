@@ -1,0 +1,6 @@
+[
+  {"keys": "Ctrl+S", "action": "save", "description": "ui.shortcuts.save"},
+  {"keys": "Ctrl+K", "action": "command_palette", "description": "ui.shortcuts.palette"},
+  {"keys": "F1", "action": "show_shortcuts", "description": "ui.shortcuts.help"},
+  {"keys": "Esc", "action": "close", "description": "ui.shortcuts.close"}
+]

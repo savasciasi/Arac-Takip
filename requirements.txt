@@ -1,0 +1,8 @@
+# PyQt5 tabanlı masaüstü uygulaması için gereksinimler.
+# MySQL bağlantısı `mysqlclient` yerine saf Python sürücüsü olan
+# `mysql-connector-python` ile sağlanır; ek derleyici kurmanıza gerek yoktur.
+PyQt5==5.15.10
+reportlab==4.0.7
+Pillow==10.4.0
+mysql-connector-python==8.1.0
+python-dotenv==1.0.1
